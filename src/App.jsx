@@ -81,6 +81,7 @@ export default function App() {
   const [roundTier2, setRoundTier2] = useState(null);
   const [p1Candidates, setP1Candidates] = useState([]);
   const [p2Candidates, setP2Candidates] = useState([]);
+  const [matchRemoteMsg, setMatchRemoteMsg] = useState(null);
 
   const currentRoundInfo = schedule[currentRoundIdx];
 
@@ -138,6 +139,18 @@ export default function App() {
       if (roomParam) {
         handleJoinOnlineRoom(roomParam);
       }
+      if (params.get('test') === 'match') {
+        const p1Sq = {};
+        const p2Sq = {};
+        SQUAD_POSITIONS.forEach((pos, idx) => {
+          if (pos.id === 'cdm') return;
+          p1Sq[pos.id] = TIER_1_PLAYERS[idx % TIER_1_PLAYERS.length];
+          p2Sq[pos.id] = TIER_2_PLAYERS[idx % TIER_2_PLAYERS.length];
+        });
+        setPlayer1(p => ({ ...p, squad: p1Sq }));
+        setPlayer2(p => ({ ...p, squad: p2Sq }));
+        setGameState('final_match');
+      }
     }
   }, []);
 
@@ -156,6 +169,8 @@ export default function App() {
       if (msg.p2Name) setPlayer2(p => ({ ...p, name: msg.p2Name, avatar: msg.p2Avatar || p.avatar }));
     } else if (msg.type === 'CONFIRM_PLACEMENT') {
       handleConfirmPlacement(msg.data, false);
+    } else if (msg.type.startsWith('MATCH_')) {
+      setMatchRemoteMsg(msg);
     } else if (msg.type === 'RESTART') {
       handleRestart(false);
     }
@@ -557,6 +572,10 @@ export default function App() {
           <HeadToHeadMatch 
             player1={player1} 
             player2={player2} 
+            isP2Bot={isP2Bot}
+            onlineState={onlineState}
+            matchRemoteMsg={matchRemoteMsg}
+            onSendMatchMessage={(msg) => onlineSync.send(msg)}
             onRestart={() => handleRestart(true)} 
           />
         ) : (
