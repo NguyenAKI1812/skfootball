@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply bg-slate-950 text-slate-100 font-sans antialiased min-h-screen selection:bg-amber-500 selection:text-black;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(30, 58, 138, 0.25) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(13, 148, 136, 0.2) 0px, transparent 50%),
+      radial-gradient(at 50% 50%, rgba(15, 23, 42, 1) 0px, rgba(2, 6, 23, 1) 100%);
+  }
+}
+
+/* Custom Soccer Pitch styling */
+.soccer-pitch {
+  background: 
+    repeating-linear-gradient(
+      0deg,
+      #15803d,
+      #15803d 40px,
+      #166534 40px,
+      #166534 80px
+    );
+  position: relative;
+  border: 3px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+.pitch-line {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Gold shimmer effect for Tier 1 Legend Cards */
+@keyframes goldShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.tier1-card {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 2px solid #f59e0b;
+  box-shadow: 0 0 25px rgba(245, 158, 11, 0.35);
+  position: relative;
+}
+
+.tier1-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.15), transparent);
+  background-size: 200% 100%;
+  animation: goldShimmer 4s infinite linear;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.tier2-card {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid #94a3b8;
+  box-shadow: 0 0 15px rgba(148, 163, 184, 0.2);
+}
+
+/* Pulsing heart/urgent countdown */
+@keyframes urgentPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.timer-urgent {
+  animation: urgentPulse 0.5s infinite;
+}
