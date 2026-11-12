@@ -168,7 +168,7 @@ export default function HeadToHeadMatch({
         team: 2,
         type: 'GOAL',
         badgeText: '⚽ VÀOOOOOO! BÀN THẮNG!',
-        badgeClass: 'bg-purple-500 text-white border-purple-300',
+        badgeClass: 'bg-rose-600 text-white border-rose-300',
         player: scorer,
         desc: getRandomItem(GOAL_TEMPLATES)
       });
@@ -572,7 +572,7 @@ export default function HeadToHeadMatch({
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 md:p-6 mb-6 shadow-xl relative overflow-hidden">
         {/* Glow ambient background */}
         <div className="absolute top-0 left-0 w-1/3 h-full bg-emerald-500/10 blur-3xl pointer-events-none" />
-        <div className="absolute top-0 right-0 w-1/3 h-full bg-purple-500/10 blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-1/3 h-full bg-rose-500/10 blur-3xl pointer-events-none" />
 
         <div className="grid grid-cols-12 items-center gap-2 md:gap-4 relative z-10">
           {/* Team 1 (Left) */}
@@ -619,7 +619,7 @@ export default function HeadToHeadMatch({
                 {liveScore1}
               </span>
               <span className="text-slate-600 text-3xl font-light">-</span>
-              <span className={activeHighlight?.team === 2 && activeHighlight?.type === 'GOAL' ? 'text-purple-400 animate-bounce' : 'text-slate-100'}>
+              <span className={activeHighlight?.team === 2 && activeHighlight?.type === 'GOAL' ? 'text-rose-400 animate-bounce' : 'text-slate-100'}>
                 {liveScore2}
               </span>
             </div>
@@ -634,20 +634,20 @@ export default function HeadToHeadMatch({
             {/* Match Minute Progress Bar */}
             <div className="w-full max-w-[220px] bg-slate-950 h-1.5 rounded-full mt-2.5 overflow-hidden border border-slate-800">
               <div 
-                className="bg-gradient-to-r from-emerald-500 via-amber-400 to-purple-500 h-full transition-all duration-75"
+                className="bg-gradient-to-r from-emerald-500 via-amber-400 to-rose-500 h-full transition-all duration-75"
                 style={{ width: `${Math.min(100, (currentMinute / 90) * 100)}%` }}
               />
             </div>
           </div>
 
-          {/* Team 2 (Right) */}
+          {/* Team 2 (Right - Opponent Red) */}
           <div className="col-span-4 flex items-center justify-end gap-3 text-right">
             <div>
               <div className="flex items-center justify-end gap-2">
-                <h3 className="text-base md:text-xl font-black text-purple-400 tracking-wide uppercase truncate max-w-[150px] md:max-w-[200px]">
+                <h3 className="text-base md:text-xl font-black text-rose-400 tracking-wide uppercase truncate max-w-[150px] md:max-w-[200px]">
                   {player2.name}
                 </h3>
-                <span className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-pulse" />
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
               </div>
               <div className="flex items-center justify-end gap-2 mt-1">
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-300">
@@ -658,7 +658,7 @@ export default function HeadToHeadMatch({
                 </span>
               </div>
             </div>
-            <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-purple-500/20 to-purple-950 border-2 border-purple-500/50 flex items-center justify-center text-3xl shadow-lg">
+            <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-rose-500/20 to-rose-950 border-2 border-rose-500/60 flex items-center justify-center text-3xl shadow-lg">
               {player2.avatar || "👔"}
             </div>
           </div>
@@ -700,14 +700,14 @@ export default function HeadToHeadMatch({
               </button>
             </div>
 
-            {/* Player 2 Ready Stand */}
+            {/* Player 2 Ready Stand (Opponent Red) */}
             <div className={`p-5 rounded-2xl border-2 transition-all ${
               p2Ready 
-                ? 'bg-purple-950/40 border-purple-500 shadow-lg shadow-purple-900/30' 
-                : 'bg-slate-950/70 border-slate-800'
+                ? 'bg-rose-950/40 border-rose-500 shadow-lg shadow-rose-900/30' 
+                : 'bg-slate-950/70 border-rose-500/50'
             }`}>
               <div className="text-4xl mb-2">{player2.avatar || "👔"}</div>
-              <h4 className="font-black text-purple-400 text-lg">{player2.name}</h4>
+              <h4 className="font-black text-rose-400 text-lg">{player2.name}</h4>
               <p className="text-xs text-slate-400 mb-4">11 Cầu thủ • OVR {t2.avgOvr} • CHEM {t2.chem}</p>
               
               <button
@@ -715,11 +715,11 @@ export default function HeadToHeadMatch({
                 disabled={onlineState.isConnected && onlineState.role !== 'guest'}
                 className={`w-full py-3 px-4 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all shadow-md ${
                   p2Ready
-                    ? 'bg-purple-500 text-white shadow-purple-500/30'
+                    ? 'bg-rose-600 text-white shadow-rose-600/30'
                     : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
                 } ${onlineState.isConnected && onlineState.role !== 'guest' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-102'}`}
               >
-                <CheckCircle2 className={`w-5 h-5 ${p2Ready ? 'fill-white text-purple-500' : 'text-slate-400'}`} />
+                <CheckCircle2 className={`w-5 h-5 ${p2Ready ? 'fill-white text-rose-600' : 'text-slate-400'}`} />
                 {p2Ready ? (isP2Bot ? '🤖 BOT ĐÃ SẴN SÀNG ✓' : 'HLV 2 ĐÃ SẴN SÀNG ✓') : 'BẤM ĐỂ SẴN SÀNG'}
               </button>
             </div>
@@ -810,12 +810,12 @@ export default function HeadToHeadMatch({
                 )}
               </div>
 
-              {/* Right Side Highlight (if Team 2) */}
+              {/* Right Side Highlight (if Team 2 - Opponent Red) */}
               <div className="md:col-span-6">
                 {activeHighlight.team === 2 ? (
-                  <div className="bg-gradient-to-bl from-purple-950/80 via-slate-900 to-slate-950 border-2 border-purple-400 rounded-3xl p-6 shadow-2xl shadow-purple-950/60 flex flex-col items-center text-center relative overflow-hidden">
+                  <div className="bg-gradient-to-bl from-rose-950/80 via-slate-900 to-slate-950 border-2 border-rose-500 rounded-3xl p-6 shadow-2xl shadow-rose-950/60 flex flex-col items-center text-center relative overflow-hidden">
                     {/* Glowing Accent Top Bar */}
-                    <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 animate-pulse" />
+                    <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-rose-400 via-red-500 to-rose-400 animate-pulse" />
                     
                     {/* Event Type Badge */}
                     <div className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider mb-3 border shadow ${activeHighlight.badgeClass}`}>
@@ -823,7 +823,7 @@ export default function HeadToHeadMatch({
                     </div>
 
                     {/* Player Big Photo */}
-                    <div className="relative w-32 h-32 md:w-36 md:h-36 rounded-2xl overflow-hidden border-2 border-amber-400 shadow-2xl bg-slate-800 mb-3">
+                    <div className="relative w-32 h-32 md:w-36 md:h-36 rounded-2xl overflow-hidden border-2 border-rose-400 shadow-2xl bg-slate-800 mb-3">
                       {activeHighlight.player.photo ? (
                         <img 
                           src={activeHighlight.player.photo} 
@@ -831,7 +831,7 @@ export default function HeadToHeadMatch({
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-3xl font-black text-amber-400">
+                        <div className="w-full h-full flex items-center justify-center text-3xl font-black text-rose-400">
                           {activeHighlight.player.name?.substring(0, 2)}
                         </div>
                       )}
@@ -853,7 +853,7 @@ export default function HeadToHeadMatch({
                     </p>
 
                     {/* Rich Description Under Player Photo */}
-                    <div className="w-full bg-slate-950/90 border border-purple-500/40 rounded-2xl p-4 text-purple-200 text-sm font-semibold leading-relaxed shadow-inner">
+                    <div className="w-full bg-slate-950/90 border border-rose-500/40 rounded-2xl p-4 text-rose-200 text-sm font-semibold leading-relaxed shadow-inner">
                       {activeHighlight.desc}
                     </div>
 
@@ -1018,7 +1018,7 @@ export default function HeadToHeadMatch({
                 className={`p-2.5 rounded-xl text-xs flex items-start gap-2.5 border transition-all ${
                   ev.team === 1 
                     ? 'bg-emerald-950/30 text-emerald-200 border-emerald-500/30' 
-                    : 'bg-purple-950/30 text-purple-200 border-purple-500/30'
+                    : 'bg-rose-950/30 text-rose-200 border-rose-500/30'
                 }`}
               >
                 <span className="px-2 py-0.5 rounded font-mono font-black text-[11px] bg-black/60 text-amber-400 border border-slate-800 shrink-0">

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { SQUAD_POSITIONS } from '../data/players';
 import { Users, ArrowLeftRight } from 'lucide-react';
 
-export default function PitchView({ squad = {}, title = "SQUAD", budget = 100, onSwap }) {
+export default function PitchView({ squad = {}, title = "SQUAD", budget = 100, onSwap, isOpponent = false }) {
   const [selectedSlotId, setSelectedSlotId] = useState(null);
   const [swapAlert, setSwapAlert] = useState(null);
 
@@ -66,16 +66,20 @@ export default function PitchView({ squad = {}, title = "SQUAD", budget = 100, o
   };
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-3.5 flex flex-col justify-between shadow-2xl relative select-none">
+    <div className={`bg-slate-900/90 rounded-3xl p-3.5 flex flex-col justify-between shadow-2xl relative select-none transition-all ${
+      isOpponent 
+        ? 'border-2 border-rose-500/80 shadow-rose-950/40 ring-1 ring-rose-500/30' 
+        : 'border-2 border-emerald-500/40 shadow-slate-950/80'
+    }`}>
       {/* Header Info */}
       <div className="flex justify-between items-center mb-2">
         <div>
           <h2 className="text-sm font-black text-white flex items-center gap-1.5 uppercase">
-            <Users className="w-4 h-4 text-emerald-400" />
-            {title}
+            <Users className={`w-4 h-4 ${isOpponent ? 'text-rose-500' : 'text-emerald-400'}`} />
+            <span className={isOpponent ? 'text-rose-400 font-extrabold' : 'text-white'}>{title}</span>
           </h2>
           <span className="text-[10px] text-slate-400">
-            PLAYERS: <strong className="text-emerald-400">{players.length}/11</strong>
+            PLAYERS: <strong className={isOpponent ? 'text-rose-400' : 'text-emerald-400'}>{players.length}/11</strong>
           </span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -99,7 +103,9 @@ export default function PitchView({ squad = {}, title = "SQUAD", budget = 100, o
       )}
 
       {/* Soccer Pitch Graphic - Larger Tokens */}
-      <div className="relative soccer-pitch rounded-2xl overflow-hidden h-[480px]">
+      <div className={`relative soccer-pitch rounded-2xl overflow-hidden h-[510px] transition-all ${
+        isOpponent ? 'ring-1 ring-rose-500/30' : ''
+      }`}>
         {/* Pitch Markings */}
         <div className="absolute top-1/2 left-0 right-0 h-[1.5px] bg-white/40 -translate-y-1/2"></div>
         <div className="absolute top-1/2 left-1/2 w-24 h-24 border border-white/40 rounded-full -translate-x-1/2 -translate-y-1/2"></div>

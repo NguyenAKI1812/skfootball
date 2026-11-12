@@ -54,10 +54,10 @@ export default function App() {
 
   const [player2, setPlayer2] = useState({
     id: 'p2',
-    name: 'HLV 2 (Tím)',
-    avatar: '🟣',
+    name: 'HLV 2 (Đỏ)',
+    avatar: '🔴',
     budget: 100,
-    color: '#8b5cf6',
+    color: '#ef4444',
     squad: {}
   });
 
@@ -512,11 +512,11 @@ export default function App() {
 
           <div 
             onClick={() => setShowProfileModal(true)}
-            className="flex items-center gap-2 px-3 py-1 rounded-xl border border-purple-500/50 bg-purple-950/40 text-xs cursor-pointer hover:border-purple-400 transition-all shadow-sm"
-            title="Bấm để đổi tên HLV 2"
+            className="flex items-center gap-2 px-3 py-1 rounded-xl border-2 border-rose-500/60 bg-rose-950/40 text-xs cursor-pointer hover:border-rose-400 transition-all shadow-sm"
+            title="Bấm để đổi tên HLV 2 (Đối thủ)"
           >
             <span>{player2.avatar}</span>
-            <span className="font-extrabold text-purple-300">{player2.name}</span>
+            <span className="font-extrabold text-rose-400">{player2.name}</span>
             <span className="font-mono font-black text-amber-400">{player2.budget}M €</span>
             <span className="text-[10px] bg-black/40 px-1 rounded text-slate-400 font-bold">
               {Object.keys(player2.squad).length}/11
@@ -566,8 +566,8 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 p-3.5 max-w-[1700px] mx-auto w-full">
+      {/* Main Content Area: Centered Vertically on Desktop */}
+      <main className="flex-1 p-3.5 max-w-[1700px] mx-auto w-full flex flex-col justify-center">
         {gameState === 'final_match' ? (
           <HeadToHeadMatch 
             player1={player1} 
@@ -580,12 +580,13 @@ export default function App() {
           />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
-            {/* Left: P1 Squad Pitch */}
+            {/* Left: P1 Squad Pitch (Green) */}
             <div className="lg:col-span-3">
               <PitchView 
                 squad={player1.squad} 
                 budget={player1.budget} 
                 title={player1.name} 
+                isOpponent={false}
                 onSwap={onlineState.role === 'guest' ? null : handleP1Swap}
               />
             </div>
@@ -619,12 +620,13 @@ export default function App() {
               />
             </div>
 
-            {/* Right: P2 Squad Pitch */}
+            {/* Right: P2 Squad Pitch (Opponent - Red with Red Border) */}
             <div className="lg:col-span-3">
               <PitchView 
                 squad={player2.squad} 
                 budget={player2.budget} 
                 title={player2.name} 
+                isOpponent={true}
                 onSwap={onlineState.role === 'host' ? null : handleP2Swap}
               />
             </div>

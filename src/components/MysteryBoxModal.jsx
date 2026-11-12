@@ -149,7 +149,7 @@ export default function MysteryBoxModal({
                       onClick={() => isWinnerP1 ? setP2ChosenSlot(slot.id) : setP1ChosenSlot(slot.id)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all flex items-center gap-1 ${
                         isSelected 
-                          ? 'bg-purple-600 text-white shadow ring-1 ring-purple-300' 
+                          ? (isWinnerP1 ? 'bg-rose-600 text-white shadow ring-1 ring-rose-300' : 'bg-emerald-500 text-slate-950 shadow ring-1 ring-emerald-300') 
                           : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                       }`}
                     >

@@ -158,7 +158,7 @@ export default function AuctionArena1v1({
                 isP1Highest 
                   ? 'bg-emerald-500 text-slate-950 shadow-md' 
                   : isP2Highest 
-                  ? 'bg-purple-600 text-white shadow-md' 
+                  ? 'bg-rose-600 text-white shadow-md' 
                   : 'bg-slate-800 text-slate-300'
               }`}>
                 <span>{highestBidder?.avatar || '⚖️'}</span>
@@ -168,16 +168,16 @@ export default function AuctionArena1v1({
           </div>
         </div>
 
-        {/* Right Flank: P2's Current Bid Display (Filling Right Empty Red Circle) */}
+        {/* Right Flank: P2's Current Bid Display (Opponent - RED) */}
         <div className="col-span-3 flex flex-col items-center">
-          <div className={`w-full rounded-2xl p-3 border text-center transition-all shadow-xl ${
+          <div className={`w-full rounded-2xl p-3 border-2 text-center transition-all shadow-xl ${
             isP2Highest 
-              ? 'bg-purple-950/50 border-purple-500 ring-2 ring-purple-500/40 shadow-purple-500/20' 
-              : 'bg-slate-950/90 border-slate-800'
+              ? 'bg-rose-950/60 border-rose-500 ring-2 ring-rose-500/50 shadow-rose-500/30' 
+              : 'bg-slate-950/90 border-rose-500/50 hover:border-rose-400'
           }`}>
             <div className="flex items-center justify-center gap-1 mb-1">
               <span className="text-base">{player2.avatar}</span>
-              <span className="text-xs font-black text-purple-400 uppercase truncate">
+              <span className="text-xs font-black text-rose-400 uppercase truncate">
                 {player2.name}
               </span>
             </div>
@@ -190,7 +190,7 @@ export default function AuctionArena1v1({
               {p2Passed ? (
                 <span className="text-sm text-slate-500 font-bold">PASS</span>
               ) : p2LastBid ? (
-                <span className={isP2Highest ? 'text-purple-400' : 'text-slate-300'}>
+                <span className={isP2Highest ? 'text-rose-400' : 'text-slate-300'}>
                   {p2LastBid}<span className="text-base font-bold text-slate-400">M</span>
                 </span>
               ) : (
@@ -205,7 +205,7 @@ export default function AuctionArena1v1({
                   PASSED
                 </span>
               ) : isP2Highest ? (
-                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-purple-600 text-white flex items-center gap-0.5 shadow">
+                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-rose-600 text-white flex items-center gap-0.5 shadow">
                   <CheckCircle2 className="w-2.5 h-2.5" /> LEADING
                 </span>
               ) : p2LastBid ? (
@@ -281,16 +281,16 @@ export default function AuctionArena1v1({
           )}
         </div>
 
-        {/* P2 Controller (Purple) */}
-        <div className={`p-2.5 rounded-2xl border transition-all ${
+        {/* P2 Controller (Opponent - RED) */}
+        <div className={`p-2.5 rounded-2xl border-2 transition-all ${
           isP2Highest 
-            ? 'bg-purple-950/30 border-purple-500 ring-1 ring-purple-500/40' 
-            : 'bg-slate-950/80 border-slate-800'
+            ? 'bg-rose-950/30 border-rose-500 ring-1 ring-rose-500/40' 
+            : 'bg-slate-950/80 border-rose-500/60'
         }`}>
           <div className="flex justify-between items-center mb-1.5">
             <div className="flex items-center gap-1.5">
               <span className="text-base">{player2.avatar}</span>
-              <span className="text-xs font-black text-purple-400 uppercase">
+              <span className="text-xs font-black text-rose-400 uppercase">
                 {player2.name}
               </span>
               <button
@@ -298,7 +298,7 @@ export default function AuctionArena1v1({
                 disabled={isP2Disabled}
                 className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full border transition-all flex items-center gap-0.5 ${
                   isP2Bot 
-                    ? 'bg-purple-900/60 border-purple-500 text-purple-300' 
+                    ? 'bg-rose-900/60 border-rose-500 text-rose-300' 
                     : 'bg-slate-800 border-slate-600 text-slate-300'
                 }`}
                 title="Toggle Human vs AI Bot"
@@ -311,7 +311,7 @@ export default function AuctionArena1v1({
               </span>
             </div>
             {isP2Highest && (
-              <span className="text-[10px] font-black bg-purple-600 text-white px-2 py-0.2 rounded-full flex items-center gap-0.5">
+              <span className="text-[10px] font-black bg-rose-600 text-white px-2 py-0.2 rounded-full flex items-center gap-0.5">
                 <CheckCircle2 className="w-3 h-3" /> LEADING
               </span>
             )}
@@ -322,15 +322,15 @@ export default function AuctionArena1v1({
               PASSED · WILL RECEIVE MID-TIER
             </div>
           ) : isP2Bot ? (
-            <div className="py-2.5 px-3 rounded-xl bg-purple-950/40 border border-purple-800 text-center text-xs text-purple-300 flex items-center justify-center gap-1.5 font-bold">
-              <Bot className="w-3.5 h-3.5 animate-bounce text-purple-400" />
+            <div className="py-2.5 px-3 rounded-xl bg-rose-950/40 border border-rose-800 text-center text-xs text-rose-300 flex items-center justify-center gap-1.5 font-bold">
+              <Bot className="w-3.5 h-3.5 animate-bounce text-rose-400" />
               <span>AI BOT BIDDING...</span>
             </div>
           ) : (
             <div className="grid grid-cols-5 gap-1.5">
-              <BidBtn label="+1M" amount={currentBid + 1} maxAllowed={p2MaxBid} onClick={() => onP2Bid(currentBid + 1)} disabled={!isAuctionActive || currentBid + 1 > p2MaxBid || isP2Highest || isP2Disabled} color="purple" />
-              <BidBtn label="+2M" amount={currentBid + 2} maxAllowed={p2MaxBid} onClick={() => onP2Bid(currentBid + 2)} disabled={!isAuctionActive || currentBid + 2 > p2MaxBid || isP2Highest || isP2Disabled} color="purple" />
-              <BidBtn label="+5M" amount={currentBid + 5} maxAllowed={p2MaxBid} onClick={() => onP2Bid(currentBid + 5)} disabled={!isAuctionActive || currentBid + 5 > p2MaxBid || isP2Highest || isP2Disabled} color="purple" />
+              <BidBtn label="+1M" amount={currentBid + 1} maxAllowed={p2MaxBid} onClick={() => onP2Bid(currentBid + 1)} disabled={!isAuctionActive || currentBid + 1 > p2MaxBid || isP2Highest || isP2Disabled} color="red" />
+              <BidBtn label="+2M" amount={currentBid + 2} maxAllowed={p2MaxBid} onClick={() => onP2Bid(currentBid + 2)} disabled={!isAuctionActive || currentBid + 2 > p2MaxBid || isP2Highest || isP2Disabled} color="red" />
+              <BidBtn label="+5M" amount={currentBid + 5} maxAllowed={p2MaxBid} onClick={() => onP2Bid(currentBid + 5)} disabled={!isAuctionActive || currentBid + 5 > p2MaxBid || isP2Highest || isP2Disabled} color="red" />
               <button
                 onClick={() => onP2Bid(p2MaxBid)}
                 disabled={!isAuctionActive || currentBid >= p2MaxBid || isP2Highest || isP2Disabled}
@@ -358,6 +358,7 @@ export default function AuctionArena1v1({
 
 function BidBtn({ label, amount, maxAllowed, onClick, disabled, color = 'emerald' }) {
   const isEmerald = color === 'emerald';
+  const isRed = color === 'red';
   return (
     <button
       onClick={onClick}
@@ -365,7 +366,7 @@ function BidBtn({ label, amount, maxAllowed, onClick, disabled, color = 'emerald
       className={`py-2 px-1 rounded-xl font-black text-xs transition-all active:scale-95 flex flex-col items-center justify-center shadow disabled:opacity-30 disabled:pointer-events-none ${
         isEmerald 
           ? 'bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950' 
-          : 'bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white'
+          : 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white border border-rose-400/40 shadow-rose-900/40'
       }`}
     >
       <span className="flex items-center gap-0.5 leading-none">

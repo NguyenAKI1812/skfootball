@@ -87,11 +87,11 @@ export default function ProfileModal({
             )}
           </div>
 
-          {/* HLV 2 Profile */}
-          <div className={`p-4 rounded-2xl border transition-all ${canEditP2 ? 'bg-slate-950/80 border-purple-500/50' : 'bg-slate-950/40 border-slate-800 opacity-60'}`}>
+          {/* HLV 2 Profile (Opponent - Red) */}
+          <div className={`p-4 rounded-2xl border-2 transition-all ${canEditP2 ? 'bg-slate-950/80 border-rose-500/60' : 'bg-slate-950/40 border-slate-800 opacity-60'}`}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-black text-purple-400 uppercase tracking-wider">
-                HLV 2 {onlineRole === 'guest' ? '(BẠN)' : ''}
+              <span className="text-xs font-black text-rose-400 uppercase tracking-wider">
+                HLV 2 {onlineRole === 'guest' ? '(BẠN)' : '(ĐỐI THỦ)'}
               </span>
               <span className="text-2xl">{p2Avatar}</span>
             </div>
@@ -103,7 +103,7 @@ export default function ProfileModal({
               disabled={!canEditP2}
               maxLength={18}
               placeholder="Nhập tên HLV 2..."
-              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm font-bold text-white focus:outline-none focus:border-purple-500 transition-colors"
+              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm font-bold text-white focus:outline-none focus:border-rose-500 transition-colors"
             />
 
             {canEditP2 && (
@@ -114,7 +114,7 @@ export default function ProfileModal({
                     key={av}
                     onClick={() => setP2Avatar(av)}
                     className={`w-7 h-7 rounded-lg text-sm flex items-center justify-center transition-all ${
-                      p2Avatar === av ? 'bg-purple-600 scale-110 shadow' : 'bg-slate-800 hover:bg-slate-700'
+                      p2Avatar === av ? 'bg-rose-600 scale-110 shadow' : 'bg-slate-800 hover:bg-slate-700'
                     }`}
                   >
                     {av}

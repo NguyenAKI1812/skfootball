@@ -70,7 +70,7 @@ export default function OnlineRoomModal({
               Mã phòng: <strong className="text-amber-400 font-mono text-base">{onlineState.roomCode}</strong>
             </div>
             <div className="text-xs text-slate-400 mt-1">
-              Bạn đang điều khiển: <strong className="text-white uppercase">{onlineState.role === 'host' ? 'HLV 1 (Xanh)' : 'HLV 2 (Tím)'}</strong>
+              Bạn đang điều khiển: <strong className="text-white uppercase">{onlineState.role === 'host' ? 'HLV 1 (Xanh)' : 'HLV 2 (Đỏ)'}</strong>
             </div>
             <button
               onClick={onDisconnect}
@@ -96,7 +96,7 @@ export default function OnlineRoomModal({
                 type="button"
                 onClick={() => setActiveTab('join')}
                 className={`flex-1 py-2 text-xs font-black rounded-xl transition-all ${
-                  activeTab === 'join' ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow' : 'text-slate-400 hover:text-white'
+                  activeTab === 'join' ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 2. Vào Phòng Đã Có (Join)
@@ -157,13 +157,13 @@ export default function OnlineRoomModal({
                     value={inputCode}
                     onChange={(e) => setInputCode(e.target.value)}
                     placeholder="Ví dụ: AUC-7291"
-                    className="w-full px-4 py-3 rounded-2xl bg-slate-950 border border-slate-700 text-base font-black font-mono text-amber-400 uppercase tracking-wider focus:outline-none focus:border-purple-500"
+                    className="w-full px-4 py-3 rounded-2xl bg-slate-950 border border-slate-700 text-base font-black font-mono text-amber-400 uppercase tracking-wider focus:outline-none focus:border-rose-500"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-3.5 rounded-2xl font-black text-sm bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white shadow-xl transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-2xl font-black text-sm bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white shadow-xl transition-all flex items-center justify-center gap-2"
                 >
                   <span>Tham Gia Phòng Ngay</span>
                   <ArrowRight className="w-4 h-4" />
