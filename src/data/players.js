@@ -62,6 +62,36 @@ const RAW_TIER_1 = [
     badge: "Icon",
     image: "🧤"
   },
+  {
+    id: "t1_gk_5",
+    name: "Peter Schmeichel",
+    tier: 1,
+    position: "GK",
+    subPos: "GK",
+    ovr: 92,
+    nation: "Đan Mạch",
+    nationCode: "dk",
+    club: "Manchester United",
+    stats: { div: 92, han: 91, kic: 84, ref: 93, spe: 60, pos: 92 },
+    era: "Legend",
+    badge: "Icon",
+    image: "🧤"
+  },
+  {
+    id: "t1_gk_6",
+    name: "Edwin van der Sar",
+    tier: 1,
+    position: "GK",
+    subPos: "GK",
+    ovr: 91,
+    nation: "Hà Lan",
+    nationCode: "nl",
+    club: "Manchester United",
+    stats: { div: 90, han: 92, kic: 86, ref: 90, spe: 58, pos: 93 },
+    era: "Legend",
+    badge: "Icon",
+    image: "🧤"
+  },
 
   // --- HẬU VỆ (DF: LB, LCB, RCB, RB) ---
   {
@@ -105,6 +135,21 @@ const RAW_TIER_1 = [
     nationCode: "ar",
     club: "Inter Milan",
     stats: { pac: 86, sho: 68, pas: 84, dri: 84, def: 92, phy: 89 },
+    era: "Legend",
+    badge: "Icon",
+    image: "🛡️"
+  },
+  {
+    id: "t1_rb_4",
+    name: "Philipp Lahm",
+    tier: 1,
+    position: "DF",
+    subPos: "RB",
+    ovr: 92,
+    nation: "Đức",
+    nationCode: "de",
+    club: "Bayern Munich",
+    stats: { pac: 86, sho: 64, pas: 87, dri: 86, def: 92, phy: 76 },
     era: "Legend",
     badge: "Icon",
     image: "🛡️"
@@ -167,6 +212,51 @@ const RAW_TIER_1 = [
     stats: { pac: 81, sho: 60, pas: 72, dri: 72, def: 92, phy: 89 },
     era: "Modern",
     badge: "Star",
+    image: "🛡️"
+  },
+  {
+    id: "t1_cb_5",
+    name: "Fabio Cannavaro",
+    tier: 1,
+    position: "DF",
+    subPos: "RCB",
+    ovr: 92,
+    nation: "Ý",
+    nationCode: "it",
+    club: "Real Madrid",
+    stats: { pac: 82, sho: 45, pas: 68, dri: 69, def: 94, phy: 88 },
+    era: "Legend",
+    badge: "Icon",
+    image: "🛡️"
+  },
+  {
+    id: "t1_cb_6",
+    name: "Alessandro Nesta",
+    tier: 1,
+    position: "DF",
+    subPos: "LCB",
+    ovr: 92,
+    nation: "Ý",
+    nationCode: "it",
+    club: "AC Milan",
+    stats: { pac: 79, sho: 46, pas: 72, dri: 70, def: 94, phy: 86 },
+    era: "Legend",
+    badge: "Icon",
+    image: "🛡️"
+  },
+  {
+    id: "t1_cb_7",
+    name: "Carles Puyol",
+    tier: 1,
+    position: "DF",
+    subPos: "RCB",
+    ovr: 91,
+    nation: "Tây Ban Nha",
+    nationCode: "es",
+    club: "Barcelona",
+    stats: { pac: 77, sho: 48, pas: 71, dri: 67, def: 93, phy: 92 },
+    era: "Legend",
+    badge: "Icon",
     image: "🛡️"
   },
   {
@@ -306,6 +396,96 @@ const RAW_TIER_1 = [
     badge: "Icon",
     image: "⚡"
   },
+  {
+    id: "t1_mf_7",
+    name: "Andrea Pirlo",
+    tier: 1,
+    position: "MF",
+    subPos: "CDM",
+    ovr: 92,
+    nation: "Ý",
+    nationCode: "it",
+    club: "AC Milan",
+    stats: { pac: 71, sho: 82, pas: 95, dri: 88, def: 78, phy: 72 },
+    era: "Legend",
+    badge: "Icon",
+    image: "⚡"
+  },
+  {
+    id: "t1_mf_8",
+    name: "Steven Gerrard",
+    tier: 1,
+    position: "MF",
+    subPos: "CM",
+    ovr: 91,
+    nation: "Anh",
+    nationCode: "en",
+    club: "Liverpool",
+    stats: { pac: 80, sho: 88, pas: 90, dri: 84, def: 82, phy: 88 },
+    era: "Legend",
+    badge: "Icon",
+    image: "⚡"
+  },
+  {
+    id: "t1_mf_9",
+    name: "Lothar Matthäus",
+    tier: 1,
+    position: "MF",
+    subPos: "CM",
+    ovr: 93,
+    nation: "Đức",
+    nationCode: "de",
+    club: "Bayern Munich",
+    stats: { pac: 86, sho: 89, pas: 90, dri: 85, def: 90, phy: 89 },
+    era: "Legend",
+    badge: "Icon",
+    image: "⚡"
+  },
+  {
+    id: "t1_mf_10",
+    name: "Claude Makélélé",
+    tier: 1,
+    position: "MF",
+    subPos: "CDM",
+    ovr: 91,
+    nation: "Pháp",
+    nationCode: "fr",
+    club: "Chelsea",
+    stats: { pac: 81, sho: 60, pas: 82, dri: 80, def: 92, phy: 88 },
+    era: "Legend",
+    badge: "Icon",
+    image: "🛡️"
+  },
+  {
+    id: "t1_mf_11",
+    name: "Kaká",
+    tier: 1,
+    position: "MF",
+    subPos: "CAM",
+    ovr: 92,
+    nation: "Brazil",
+    nationCode: "br",
+    club: "AC Milan",
+    stats: { pac: 91, sho: 86, pas: 88, dri: 92, def: 48, phy: 76 },
+    era: "Legend",
+    badge: "Icon",
+    image: "⚡"
+  },
+  {
+    id: "t1_mf_12",
+    name: "Toni Kroos",
+    tier: 1,
+    position: "MF",
+    subPos: "CM",
+    ovr: 91,
+    nation: "Đức",
+    nationCode: "de",
+    club: "Real Madrid",
+    stats: { pac: 64, sho: 83, pas: 94, dri: 84, def: 74, phy: 73 },
+    era: "Modern",
+    badge: "Star",
+    image: "⚡"
+  },
 
   // --- TIỀN ĐẠO (FW: LW, ST, RW) ---
   {
@@ -427,6 +607,66 @@ const RAW_TIER_1 = [
     era: "Modern",
     badge: "Star",
     image: "⚡"
+  },
+  {
+    id: "t1_fw_5",
+    name: "Neymar Jr",
+    tier: 1,
+    position: "FW",
+    subPos: "LW",
+    ovr: 93,
+    nation: "Brazil",
+    nationCode: "br",
+    club: "Barcelona",
+    stats: { pac: 91, sho: 86, pas: 88, dri: 95, def: 38, phy: 66 },
+    era: "Modern",
+    badge: "Star",
+    image: "⚡"
+  },
+  {
+    id: "t1_fw_6",
+    name: "Mohamed Salah",
+    tier: 1,
+    position: "FW",
+    subPos: "RW",
+    ovr: 92,
+    nation: "Ai Cập",
+    nationCode: "eg",
+    club: "Liverpool",
+    stats: { pac: 91, sho: 89, pas: 85, dri: 90, def: 45, phy: 77 },
+    era: "Modern",
+    badge: "Star",
+    image: "⚡"
+  },
+  {
+    id: "t1_st_5",
+    name: "Karim Benzema",
+    tier: 1,
+    position: "FW",
+    subPos: "ST",
+    ovr: 92,
+    nation: "Pháp",
+    nationCode: "fr",
+    club: "Real Madrid",
+    stats: { pac: 82, sho: 90, pas: 85, dri: 89, def: 42, phy: 81 },
+    era: "Modern",
+    badge: "Star",
+    image: "⚽"
+  },
+  {
+    id: "t1_st_6",
+    name: "Robert Lewandowski",
+    tier: 1,
+    position: "FW",
+    subPos: "ST",
+    ovr: 92,
+    nation: "Ba Lan",
+    nationCode: "pl",
+    club: "Bayern Munich",
+    stats: { pac: 80, sho: 93, pas: 80, dri: 86, def: 44, phy: 85 },
+    era: "Modern",
+    badge: "Star",
+    image: "⚽"
   }
 ];
 
@@ -687,6 +927,374 @@ const RAW_TIER_2 = [
     stats: { pac: 70, sho: 79, pas: 77, dri: 77, def: 70, phy: 78 },
     badge: "Mid",
     image: "⚡"
+  },
+  // --- BỔ SUNG THỦ MÔN TẦNG 2 (2) ---
+  {
+    id: "t2_gk_5",
+    name: "Nick Pope",
+    tier: 2,
+    position: "GK",
+    subPos: "GK",
+    ovr: 82,
+    nation: "Anh",
+    nationCode: "en",
+    club: "Newcastle",
+    stats: { div: 81, han: 82, kic: 69, ref: 84, spe: 51, pos: 82 },
+    badge: "Mid",
+    image: "🧤"
+  },
+  {
+    id: "t2_gk_6",
+    name: "Robert Sanchez",
+    tier: 2,
+    position: "GK",
+    subPos: "GK",
+    ovr: 80,
+    nation: "Tây Ban Nha",
+    nationCode: "es",
+    club: "Chelsea",
+    stats: { div: 80, han: 78, kic: 77, ref: 82, spe: 53, pos: 79 },
+    badge: "Mid",
+    image: "🧤"
+  },
+  // --- BỔ SUNG HẬU VỆ TẦNG 2 (6) ---
+  {
+    id: "t2_df_9",
+    name: "Kieran Trippier",
+    tier: 2,
+    position: "DF",
+    subPos: "RB",
+    ovr: 82,
+    nation: "Anh",
+    nationCode: "en",
+    club: "Newcastle",
+    stats: { pac: 71, sho: 66, pas: 85, dri: 78, def: 80, phy: 74 },
+    badge: "Mid",
+    image: "🛡️"
+  },
+  {
+    id: "t2_df_10",
+    name: "Ben White",
+    tier: 2,
+    position: "DF",
+    subPos: "RB",
+    ovr: 82,
+    nation: "Anh",
+    nationCode: "en",
+    club: "Arsenal",
+    stats: { pac: 76, sho: 58, pas: 78, dri: 77, def: 82, phy: 80 },
+    badge: "Mid",
+    image: "🛡️"
+  },
+  {
+    id: "t2_df_11",
+    name: "Luke Shaw",
+    tier: 2,
+    position: "DF",
+    subPos: "LB",
+    ovr: 81,
+    nation: "Anh",
+    nationCode: "en",
+    club: "Manchester United",
+    stats: { pac: 78, sho: 60, pas: 79, dri: 78, def: 80, phy: 81 },
+    badge: "Mid",
+    image: "🛡️"
+  },
+  {
+    id: "t2_df_12",
+    name: "Tyrick Mitchell",
+    tier: 2,
+    position: "DF",
+    subPos: "LB",
+    ovr: 79,
+    nation: "Anh",
+    nationCode: "en",
+    club: "Crystal Palace",
+    stats: { pac: 80, sho: 52, pas: 71, dri: 74, def: 79, phy: 77 },
+    badge: "Mid",
+    image: "🛡️"
+  },
+  {
+    id: "t2_df_13",
+    name: "Sven Botman",
+    tier: 2,
+    position: "DF",
+    subPos: "LCB",
+    ovr: 82,
+    nation: "Hà Lan",
+    nationCode: "nl",
+    club: "Newcastle",
+    stats: { pac: 68, sho: 45, pas: 70, dri: 66, def: 83, phy: 84 },
+    badge: "Mid",
+    image: "🛡️"
+  },
+  {
+    id: "t2_df_14",
+    name: "Joachim Andersen",
+    tier: 2,
+    position: "DF",
+    subPos: "RCB",
+    ovr: 81,
+    nation: "Đan Mạch",
+    nationCode: "dk",
+    club: "Fulham",
+    stats: { pac: 66, sho: 52, pas: 76, dri: 68, def: 81, phy: 83 },
+    badge: "Mid",
+    image: "🛡️"
+  },
+  // --- BỔ SUNG TIỀN VỆ TẦNG 2 (6) ---
+  {
+    id: "t2_mf_7",
+    name: "Wilfred Ndidi",
+    tier: 2,
+    position: "MF",
+    subPos: "CDM",
+    ovr: 81,
+    nation: "Nigeria",
+    nationCode: "ng",
+    club: "Leicester City",
+    stats: { pac: 71, sho: 64, pas: 74, dri: 75, def: 82, phy: 84 },
+    badge: "Mid",
+    image: "🛡️"
+  },
+  {
+    id: "t2_mf_8",
+    name: "Pierre-Emile Højbjerg",
+    tier: 2,
+    position: "MF",
+    subPos: "CDM",
+    ovr: 82,
+    nation: "Đan Mạch",
+    nationCode: "dk",
+    club: "Marseille",
+    stats: { pac: 66, sho: 72, pas: 80, dri: 76, def: 80, phy: 84 },
+    badge: "Mid",
+    image: "⚡"
+  },
+  {
+    id: "t2_mf_9",
+    name: "Yves Bissouma",
+    tier: 2,
+    position: "MF",
+    subPos: "CM",
+    ovr: 81,
+    nation: "Mali",
+    nationCode: "ml",
+    club: "Tottenham",
+    stats: { pac: 77, sho: 67, pas: 77, dri: 81, def: 79, phy: 80 },
+    badge: "Mid",
+    image: "⚡"
+  },
+  {
+    id: "t2_mf_10",
+    name: "Abdoulaye Doucouré",
+    tier: 2,
+    position: "MF",
+    subPos: "CAM",
+    ovr: 80,
+    nation: "Mali",
+    nationCode: "ml",
+    club: "Everton",
+    stats: { pac: 74, sho: 75, pas: 75, dri: 76, def: 76, phy: 84 },
+    badge: "Mid",
+    image: "⚡"
+  },
+  {
+    id: "t2_mf_11",
+    name: "Ross Barkley",
+    tier: 2,
+    position: "MF",
+    subPos: "CM",
+    ovr: 79,
+    nation: "Anh",
+    nationCode: "en",
+    club: "Aston Villa",
+    stats: { pac: 71, sho: 76, pas: 80, dri: 81, def: 67, phy: 79 },
+    badge: "Mid",
+    image: "⚡"
+  },
+  {
+    id: "t2_mf_12",
+    name: "Giovani Lo Celso",
+    tier: 2,
+    position: "MF",
+    subPos: "CAM",
+    ovr: 81,
+    nation: "Argentina",
+    nationCode: "ar",
+    club: "Real Betis",
+    stats: { pac: 73, sho: 75, pas: 82, dri: 83, def: 68, phy: 69 },
+    badge: "Mid",
+    image: "⚡"
+  },
+  // --- BỔ SUNG TIỀN ĐẠO TẦNG 2 (12) ---
+  {
+    id: "t2_fw_1",
+    name: "Álvaro Morata",
+    tier: 2,
+    position: "FW",
+    subPos: "ST",
+    ovr: 82,
+    nation: "Tây Ban Nha",
+    nationCode: "es",
+    club: "AC Milan",
+    stats: { pac: 79, sho: 81, pas: 74, dri: 79, def: 42, phy: 79 },
+    badge: "Mid",
+    image: "⚽"
+  },
+  {
+    id: "t2_fw_2",
+    name: "Richarlison",
+    tier: 2,
+    position: "FW",
+    subPos: "ST",
+    ovr: 81,
+    nation: "Brazil",
+    nationCode: "br",
+    club: "Tottenham",
+    stats: { pac: 81, sho: 80, pas: 72, dri: 79, def: 52, phy: 80 },
+    badge: "Mid",
+    image: "⚽"
+  },
+  {
+    id: "t2_fw_3",
+    name: "Michail Antonio",
+    tier: 2,
+    position: "FW",
+    subPos: "ST",
+    ovr: 79,
+    nation: "Jamaica",
+    nationCode: "jm",
+    club: "West Ham",
+    stats: { pac: 80, sho: 78, pas: 69, dri: 75, def: 46, phy: 87 },
+    badge: "Mid",
+    image: "⚽"
+  },
+  {
+    id: "t2_fw_4",
+    name: "Timo Werner",
+    tier: 2,
+    position: "FW",
+    subPos: "LW",
+    ovr: 80,
+    nation: "Đức",
+    nationCode: "de",
+    club: "Tottenham",
+    stats: { pac: 90, sho: 77, pas: 72, dri: 80, def: 38, phy: 68 },
+    badge: "Mid",
+    image: "⚡"
+  },
+  {
+    id: "t2_fw_5",
+    name: "Dominic Calvert-Lewin",
+    tier: 2,
+    position: "FW",
+    subPos: "ST",
+    ovr: 79,
+    nation: "Anh",
+    nationCode: "en",
+    club: "Everton",
+    stats: { pac: 81, sho: 78, pas: 64, dri: 74, def: 42, phy: 82 },
+    badge: "Mid",
+    image: "⚽"
+  },
+  {
+    id: "t2_fw_6",
+    name: "Adama Traoré",
+    tier: 2,
+    position: "FW",
+    subPos: "RW",
+    ovr: 79,
+    nation: "Tây Ban Nha",
+    nationCode: "es",
+    club: "Fulham",
+    stats: { pac: 94, sho: 68, pas: 71, dri: 84, def: 42, phy: 84 },
+    badge: "Mid",
+    image: "⚡"
+  },
+  {
+    id: "t2_fw_7",
+    name: "Callum Wilson",
+    tier: 2,
+    position: "FW",
+    subPos: "ST",
+    ovr: 81,
+    nation: "Anh",
+    nationCode: "en",
+    club: "Newcastle",
+    stats: { pac: 80, sho: 82, pas: 68, dri: 76, def: 38, phy: 78 },
+    badge: "Mid",
+    image: "⚽"
+  },
+  {
+    id: "t2_fw_8",
+    name: "Raúl Jiménez",
+    tier: 2,
+    position: "FW",
+    subPos: "ST",
+    ovr: 80,
+    nation: "Mexico",
+    nationCode: "mx",
+    club: "Fulham",
+    stats: { pac: 72, sho: 80, pas: 73, dri: 77, def: 45, phy: 79 },
+    badge: "Mid",
+    image: "⚽"
+  },
+  {
+    id: "t2_fw_9",
+    name: "Danny Welbeck",
+    tier: 2,
+    position: "FW",
+    subPos: "ST",
+    ovr: 79,
+    nation: "Anh",
+    nationCode: "en",
+    club: "Brighton",
+    stats: { pac: 77, sho: 78, pas: 71, dri: 78, def: 44, phy: 77 },
+    badge: "Mid",
+    image: "⚽"
+  },
+  {
+    id: "t2_fw_10",
+    name: "Brennan Johnson",
+    tier: 2,
+    position: "FW",
+    subPos: "RW",
+    ovr: 81,
+    nation: "Wales",
+    nationCode: "gb",
+    club: "Tottenham",
+    stats: { pac: 89, sho: 77, pas: 74, dri: 80, def: 43, phy: 69 },
+    badge: "Mid",
+    image: "⚡"
+  },
+  {
+    id: "t2_fw_11",
+    name: "Harvey Barnes",
+    tier: 2,
+    position: "FW",
+    subPos: "LW",
+    ovr: 81,
+    nation: "Anh",
+    nationCode: "en",
+    club: "Newcastle",
+    stats: { pac: 85, sho: 79, pas: 74, dri: 81, def: 40, phy: 72 },
+    badge: "Mid",
+    image: "⚡"
+  },
+  {
+    id: "t2_fw_12",
+    name: "Antony",
+    tier: 2,
+    position: "FW",
+    subPos: "RW",
+    ovr: 79,
+    nation: "Brazil",
+    nationCode: "br",
+    club: "Manchester United",
+    stats: { pac: 85, sho: 74, pas: 73, dri: 83, def: 44, phy: 65 },
+    badge: "Mid",
+    image: "⚡"
   }
 ];
 
@@ -724,6 +1332,56 @@ export const SQUAD_POSITIONS = [
   { id: "st", code: "ST", name: "Tiền Đạo Cắm", category: "FW", lineName: "Forward", x: 50, y: 14 },
   { id: "rw", code: "RW", name: "Tiền Đạo Phải", category: "FW", lineName: "Forward", x: 82, y: 19 },
 ];
+
+/**
+ * Check if a player placed at `slotCode` is out of their native position.
+ * LCB and RCB are treated as interchangeable center-back slots.
+ */
+export function isOutOfPosition(player, slotCode) {
+  if (!player || !slotCode) return false;
+  const nativePos = player.subPos || player.position;
+  if (nativePos === slotCode) return false;
+  if ((nativePos === 'LCB' || nativePos === 'RCB') && (slotCode === 'LCB' || slotCode === 'RCB')) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Calculate effective team average OVR, Chemistry (30..100), and out-of-position count.
+ * Out-of-position players lose 1 OVR and 3 CHEM.
+ */
+export function calcSquadStats(squad = {}) {
+  const entries = Object.entries(squad).filter(([, p]) => Boolean(p));
+  const players = entries.map(([, p]) => p);
+
+  let outOfPosCount = 0;
+  let totalOvr = 0;
+
+  entries.forEach(([slotId, p]) => {
+    const slot = SQUAD_POSITIONS.find(s => s.id === slotId);
+    const oop = slot ? isOutOfPosition(p, slot.code) : false;
+    if (oop) outOfPosCount++;
+    totalOvr += oop ? Math.max(50, p.ovr - 1) : p.ovr;
+  });
+
+  const avgOvr = players.length > 0 ? Math.round(totalOvr / players.length) : 0;
+
+  let chemistry = 50;
+  const nationCounts = {};
+  const clubCounts = {};
+  players.forEach(p => {
+    nationCounts[p.nation] = (nationCounts[p.nation] || 0) + 1;
+    clubCounts[p.club] = (clubCounts[p.club] || 0) + 1;
+  });
+  Object.values(nationCounts).forEach(cnt => { if (cnt >= 2) chemistry += (cnt - 1) * 8; });
+  Object.values(clubCounts).forEach(cnt => { if (cnt >= 2) chemistry += (cnt - 1) * 10; });
+
+  chemistry -= outOfPosCount * 3;
+  chemistry = Math.min(100, Math.max(30, chemistry));
+
+  return { avgOvr, chemistry, outOfPosCount, players };
+}
 
 // Hàm sinh 11 Vòng Đấu: Đúng 1 GK, 4 DF, 3 MF, 3 FW
 export function generateDraftSchedule() {

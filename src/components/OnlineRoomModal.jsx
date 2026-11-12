@@ -70,7 +70,7 @@ export default function OnlineRoomModal({
               Mã phòng: <strong className="text-amber-400 font-mono text-base">{onlineState.roomCode}</strong>
             </div>
             <div className="text-xs text-slate-400 mt-1">
-              Bạn đang điều khiển: <strong className="text-white uppercase">{onlineState.role === 'host' ? 'HLV 1 (Xanh)' : 'HLV 2 (Đỏ)'}</strong>
+              Bạn đang điều khiển: <strong className="text-white uppercase">{onlineState.role === 'host' ? 'HLV 1 (Bạn)' : 'HLV 2 (Đối thủ)'}</strong>
             </div>
             <button
               onClick={onDisconnect}

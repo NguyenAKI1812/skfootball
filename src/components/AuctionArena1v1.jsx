@@ -1,6 +1,5 @@
 import React from 'react';
 import PlayerCard from './PlayerCard';
-import { Clock, ArrowUpCircle, Flame, Bot, User, CheckCircle2, TrendingUp, ShieldAlert } from 'lucide-react';
 
 export default function AuctionArena1v1({
   currentRound,
@@ -25,13 +24,23 @@ export default function AuctionArena1v1({
   bidHistory = [],
   isAuctionActive,
   isP1Disabled = false,
-  isP2Disabled = false
+  isP2Disabled = false,
+  isLobby = false,
+  p1Ready = false,
+  p2Ready = false,
+  onP1Ready,
+  onP2Ready,
+  isTactics = false,
+  tacticsTimeLeft = 30,
+  p1TacticsReady = false,
+  p2TacticsReady = false,
+  onP1TacticsReady,
+  onP2TacticsReady
 }) {
   const isUrgent = timeLeft <= 4 && timeLeft > 0;
   const isP1Highest = highestBidder?.id === player1.id;
   const isP2Highest = highestBidder?.id === player2.id;
 
-  // Derive each player's latest bid on this current player
   const p1LastBid = bidHistory.filter(b => b.playerId === player1.id).slice(-1)[0]?.amount || null;
   const p2LastBid = bidHistory.filter(b => b.playerId === player2.id).slice(-1)[0]?.amount || null;
 
@@ -43,237 +52,428 @@ export default function AuctionArena1v1({
   };
 
   const categoryBadgeColors = {
-    GK: 'bg-yellow-950/80 text-yellow-300 border-yellow-500/50',
-    DF: 'bg-blue-950/80 text-blue-300 border-blue-500/50',
-    MF: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50',
-    FW: 'bg-red-950/80 text-red-300 border-red-500/50'
+    GK: 'bg-amber-950/70 text-amber-300 border-amber-500/40',
+    DF: 'bg-sky-950/70 text-sky-300 border-sky-500/40',
+    MF: 'bg-emerald-950/70 text-emerald-300 border-emerald-500/40',
+    FW: 'bg-rose-950/70 text-rose-300 border-rose-500/40'
   };
 
+  if (isLobby) {
+    return (
+      <div className="broadcast-panel border border-slate-800 rounded-xl p-5 flex flex-col justify-between relative overflow-hidden h-full min-h-[460px]">
+        <div className="flex justify-between items-center pb-3 border-b border-white/10">
+          <span className="font-display text-sm font-extrabold uppercase tracking-wider text-amber-300 bg-amber-950/60 px-2.5 py-0.5 rounded-sm border border-amber-500/40">
+            PRE-MATCH · READY CHECK
+          </span>
+          <span className="font-mono-num text-xs font-bold text-slate-400">
+            {totalRounds} VÒNG · 100M €
+          </span>
+        </div>
+
+        <div className="my-auto py-6 text-center">
+          <h2 className="font-display text-3xl font-extrabold text-white uppercase tracking-wide mb-1.5">
+            SẴN SÀNG ĐẤU GIÁ 1V1
+          </h2>
+          <p className="text-xs text-slate-400 max-w-md mx-auto mb-6">
+            Cả 2 HLV bấm Sẵn sàng để mở thẻ cầu thủ đầu tiên và bắt đầu đếm ngược vòng 1.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className={`p-4 rounded-xl border transition-colors ${
+              p1Ready ? 'bg-emerald-950/35 border-emerald-400' : 'bg-slate-950/80 border-emerald-500/35'
+            }`}>
+              <div className="font-display text-xl font-extrabold text-emerald-400 uppercase truncate">
+                {player1.name}
+              </div>
+              <div className="font-mono-num text-xs text-slate-400 mb-3">
+                BUDGET: <strong className="text-amber-400">{player1.budget}M</strong>
+              </div>
+              <button
+                onClick={onP1Ready}
+                disabled={isP1Disabled}
+                className={`w-full py-2.5 px-4 rounded font-display text-sm font-extrabold uppercase tracking-wider transition-colors ${
+                  p1Ready
+                    ? 'bg-emerald-500 text-slate-950'
+                    : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+                } ${isP1Disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                {p1Ready ? 'ĐÃ SẴN SÀNG' : 'SẴN SÀNG'}
+              </button>
+            </div>
+
+            <div className={`p-4 rounded-xl border-2 transition-colors ${
+              p2Ready ? 'bg-rose-950/35 border-rose-500' : 'bg-slate-950/80 border-rose-500/65'
+            }`}>
+              <div className="flex items-center justify-center gap-2">
+                <span className="font-display text-xl font-extrabold text-rose-400 uppercase truncate">
+                  {player2.name}
+                </span>
+                <button
+                  onClick={onToggleP2Bot}
+                  disabled={isP2Disabled}
+                  className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-sm border uppercase tracking-wider cursor-pointer ${
+                    isP2Bot
+                      ? 'bg-rose-900/70 border-rose-400 text-rose-200'
+                      : 'bg-slate-800 border-slate-600 text-slate-300 hover:border-slate-500'
+                  }`}
+                >
+                  {isP2Bot ? 'BOT' : 'P2'}
+                </button>
+              </div>
+              <div className="font-mono-num text-xs text-slate-400 mb-3">
+                BUDGET: <strong className="text-amber-400">{player2.budget}M</strong>
+              </div>
+              <button
+                onClick={onP2Ready}
+                disabled={isP2Disabled || isP2Bot}
+                className={`w-full py-2.5 px-4 rounded font-display text-sm font-extrabold uppercase tracking-wider transition-colors ${
+                  p2Ready
+                    ? 'bg-rose-600 text-white'
+                    : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+                } ${(isP2Disabled || isP2Bot) ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                {p2Ready ? (isP2Bot ? 'BOT ĐÃ SẴN SÀNG' : 'ĐÃ SẴN SÀNG') : 'SẴN SÀNG'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-3 border-t border-white/10 text-center text-[11px] text-slate-500">
+          Bạn có thể đổi tên HLV hoặc mở Phòng Online ở thanh trên trước khi bấm Sẵn sàng.
+        </div>
+      </div>
+    );
+  }
+
+  if (isTactics) {
+    const tacticsUrgent = tacticsTimeLeft <= 5;
+    return (
+      <div className="broadcast-panel border border-slate-800 rounded-xl p-5 flex flex-col justify-between relative overflow-hidden h-full min-h-[460px]">
+        <div className="flex justify-between items-center pb-3 border-b border-white/10">
+          <span className="font-display text-sm font-extrabold uppercase tracking-wider text-amber-300 bg-amber-950/60 px-2.5 py-0.5 rounded-sm border border-amber-500/40">
+            CHUẨN BỊ ĐỘI HÌNH · 11/11
+          </span>
+          <div
+            className={`flex items-center gap-2 px-3 py-0.5 rounded-sm border transition-all ${
+              tacticsUrgent
+                ? 'bg-rose-950/90 border-rose-500 text-rose-400 timer-urgent shadow-[0_0_18px_rgba(244,63,94,0.45)]'
+                : 'bg-slate-950 border-slate-700 text-amber-400'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${tacticsUrgent ? 'bg-rose-500 animate-ping' : 'bg-emerald-400'}`} />
+            <span className="font-mono-num text-xl font-extrabold tracking-tight w-9 text-center">
+              {tacticsTimeLeft}s
+            </span>
+          </div>
+        </div>
+
+        <div className="my-auto py-5 text-center">
+          <h2 className="font-display text-3xl font-extrabold text-white uppercase tracking-wide mb-1.5">
+            SẮP XẾP LẠI ĐỘI HÌNH
+          </h2>
+          <p className="text-xs text-slate-300 max-w-md mx-auto mb-6 leading-relaxed">
+            Bấm chọn 2 cầu thủ cùng tuyến trên sân hai bên để đổi vị trí (đặt đúng vị trí gốc để tránh bị trừ <strong className="text-rose-400">-1 OVR / -3 CHEM</strong>). Cả 2 bấm Sẵn sàng sẽ vào trận ngay!
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className={`p-4 rounded-xl border transition-colors ${
+              p1TacticsReady ? 'bg-emerald-950/35 border-emerald-400' : 'bg-slate-950/80 border-emerald-500/35'
+            }`}>
+              <div className="font-display text-xl font-extrabold text-emerald-400 uppercase truncate mb-3">
+                {player1.name}
+              </div>
+              <button
+                onClick={onP1TacticsReady}
+                disabled={isP1Disabled}
+                className={`w-full py-2.5 px-4 rounded font-display text-sm font-extrabold uppercase tracking-wider transition-colors ${
+                  p1TacticsReady
+                    ? 'bg-emerald-500 text-slate-950'
+                    : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+                } ${isP1Disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                {p1TacticsReady ? 'ĐÃ SẴN SÀNG' : 'SẴN SÀNG VÀO TRẬN'}
+              </button>
+            </div>
+
+            <div className={`p-4 rounded-xl border-2 transition-colors ${
+              p2TacticsReady ? 'bg-rose-950/35 border-rose-500' : 'bg-slate-950/80 border-rose-500/65'
+            }`}>
+              <div className="font-display text-xl font-extrabold text-rose-400 uppercase truncate mb-3">
+                {player2.name}
+              </div>
+              <button
+                onClick={onP2TacticsReady}
+                disabled={isP2Disabled || isP2Bot}
+                className={`w-full py-2.5 px-4 rounded font-display text-sm font-extrabold uppercase tracking-wider transition-colors ${
+                  p2TacticsReady
+                    ? 'bg-rose-600 text-white'
+                    : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+                } ${(isP2Disabled || isP2Bot) ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                {p2TacticsReady ? (isP2Bot ? 'BOT ĐÃ SẴN SÀNG' : 'ĐÃ SẴN SÀNG') : 'SẴN SÀNG VÀO TRẬN'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-3 border-t border-white/10 text-center text-[11px] text-slate-500">
+          Hết 30 giây hệ thống sẽ tự động bắt đầu trận Chung kết Siêu Cúp 1v1.
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-4 flex flex-col justify-between shadow-2xl relative">
-      {/* Top Header: Round + Position + Timer */}
-      <div className="flex justify-between items-center pb-2.5 border-b border-slate-800">
+    <div className="broadcast-panel border border-slate-800 rounded-xl p-4 flex flex-col justify-between relative overflow-hidden">
+      {/* Seamless Inner Side Glow extending page light into the arena flanks */}
+      <div
+        className={`absolute inset-y-0 left-0 w-1/2 pointer-events-none transition-opacity duration-500 z-0 bg-gradient-to-r from-emerald-500/25 via-emerald-500/10 to-transparent ${
+          isP1Highest ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+      <div
+        className={`absolute inset-y-0 right-0 w-1/2 pointer-events-none transition-opacity duration-500 z-0 bg-gradient-to-l from-rose-500/25 via-rose-500/10 to-transparent ${
+          isP2Highest ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+
+      {/* Broadcast Top Strip: Round, Position, Clock */}
+      <div className="flex justify-between items-center pb-3 border-b border-white/10 relative z-10">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-black uppercase tracking-wider text-amber-400 bg-amber-950/70 px-2.5 py-0.5 rounded-full border border-amber-500/40">
+          <span className="font-display text-sm font-extrabold uppercase tracking-wider text-amber-300 bg-amber-950/60 px-2.5 py-0.5 rounded-sm border border-amber-500/40">
             ROUND {currentRound}/{totalRounds}
           </span>
-          <span className={`text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${categoryBadgeColors[currentRoundInfo?.category] || 'bg-slate-800 text-slate-300'}`}>
+          <span
+            className={`font-display text-sm font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-sm border ${
+              categoryBadgeColors[currentRoundInfo?.category] || 'bg-slate-800 text-slate-300 border-slate-700'
+            }`}
+          >
             {categoryNames[currentRoundInfo?.category] || currentRoundInfo?.category}
           </span>
         </div>
 
-        {/* Real-time Countdown Timer */}
-        <div 
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-xl border transition-all ${
-            isUrgent 
-              ? 'bg-red-950/80 border-red-500 text-red-400 timer-urgent shadow-[0_0_20px_rgba(239,68,68,0.7)]' 
+        {/* Crisp Digital Broadcast Clock */}
+        <div
+          className={`flex items-center gap-2 px-3 py-0.5 rounded-sm border transition-all ${
+            isUrgent
+              ? 'bg-rose-950/90 border-rose-500 text-rose-400 timer-urgent shadow-[0_0_18px_rgba(244,63,94,0.45)]'
               : 'bg-slate-950 border-slate-700 text-amber-400'
           }`}
         >
-          <Clock className={`w-4 h-4 ${isUrgent ? 'animate-spin' : ''}`} />
-          <span className="text-xl font-black font-mono w-9 text-center">
+          <span
+            className={`w-2 h-2 rounded-full ${
+              isUrgent ? 'bg-rose-500 animate-ping' : 'bg-emerald-400'
+            }`}
+          />
+          <span className="font-mono-num text-xl font-extrabold tracking-tight w-8 text-center">
             {timeLeft}s
           </span>
         </div>
       </div>
 
-      {/* Main Duel Section: P1 Bid Stand (Left) <---> Player Card + Top Bid (Center) <---> P2 Bid Stand (Right) */}
-      <div className="grid grid-cols-12 gap-3 my-2 items-center">
-        {/* Left Flank: P1's Current Bid Display (Filling Left Empty Red Circle) */}
-        <div className="col-span-3 flex flex-col items-center">
-          <div className={`w-full rounded-2xl p-3 border text-center transition-all shadow-xl ${
-            isP1Highest 
-              ? 'bg-emerald-950/50 border-emerald-500 ring-2 ring-emerald-500/40 shadow-emerald-500/20' 
-              : 'bg-slate-950/90 border-slate-800'
-          }`}>
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <span className="text-base">{player1.avatar}</span>
-              <span className="text-xs font-black text-emerald-400 uppercase truncate">
-                {player1.name}
-              </span>
+      {/* Center Duel Stage */}
+      <div className="grid grid-cols-12 gap-3 my-3 items-stretch relative z-10">
+        {/* Left Flank: P1 Current Bid Stand */}
+        <div className="col-span-3 flex flex-col justify-center">
+          <div
+            className={`w-full rounded-lg p-3 border text-center transition-all relative overflow-hidden ${
+              isP1Highest
+                ? 'bg-emerald-950/45 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.2)]'
+                : 'bg-slate-950/85 border-emerald-500/35'
+            }`}
+          >
+            {/* Top Team Stripe */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-400" />
+
+            <div className="font-display text-sm font-extrabold text-emerald-400 uppercase tracking-wide truncate mt-0.5">
+              {player1.name}
             </div>
-            
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+
+            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.14em] block mt-1">
               CURRENT BID
             </span>
 
-            <div className="text-3xl font-black font-mono my-1 tracking-tight text-white">
+            <div className="font-mono-num text-3xl font-extrabold my-1 tracking-tight text-white">
               {p1Passed ? (
-                <span className="text-sm text-slate-500 font-bold">PASS</span>
+                <span className="font-display text-lg text-slate-500 tracking-wider">PASS</span>
               ) : p1LastBid ? (
-                <span className={isP1Highest ? 'text-emerald-400' : 'text-slate-300'}>
-                  {p1LastBid}<span className="text-base font-bold text-slate-400">M</span>
+                <span className={isP1Highest ? 'text-emerald-400' : 'text-slate-200'}>
+                  {p1LastBid}
+                  <span className="text-sm font-bold text-slate-400 ml-0.5">M</span>
                 </span>
               ) : (
-                <span className="text-slate-600 text-xl font-bold">--</span>
+                <span className="text-slate-600 text-2xl">--</span>
               )}
             </div>
 
-            {/* Status Pill */}
             <div className="mt-1 flex justify-center">
               {p1Passed ? (
-                <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded-sm bg-slate-800 text-slate-400 uppercase tracking-wider">
                   PASSED
                 </span>
               ) : isP1Highest ? (
-                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 flex items-center gap-0.5 shadow">
-                  <CheckCircle2 className="w-2.5 h-2.5" /> LEADING
+                <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-sm bg-emerald-500 text-slate-950 uppercase tracking-wider">
+                  LEADING
                 </span>
               ) : p1LastBid ? (
-                <span className="text-[9px] font-black px-2 py-0.5 rounded bg-amber-950/60 text-amber-400 border border-amber-500/40">
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded-sm bg-amber-950/70 text-amber-400 border border-amber-500/40 uppercase tracking-wider">
                   OUTBID
                 </span>
               ) : (
-                <span className="text-[9px] font-bold text-slate-500">
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
                   WAITING
                 </span>
               )}
             </div>
 
-            <div className="mt-2 pt-1.5 border-t border-slate-800/80 text-[10px] text-slate-400 font-mono">
-              BUDGET: <strong className="text-slate-200">{player1.budget}M</strong>
+            <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-xs font-mono-num bg-slate-900/80 px-2.5 py-1 rounded border border-emerald-500/20">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">CÒN LẠI</span>
+              <strong className="text-amber-300 text-sm">{player1.budget}M €</strong>
             </div>
           </div>
         </div>
 
-        {/* Center: Player Card (Photo on Top) + TOP BID (Directly Underneath) */}
-        <div className="col-span-6 flex flex-col items-center">
-          {/* 1. Player Card */}
-          <div className="w-full max-w-[220px]">
+        {/* Center Stage: FUT Player Card + TOP BID Plate (spans full center width) */}
+        <div className="col-span-6 flex flex-col items-stretch">
+          <div className="w-full">
             <PlayerCard player={currentTier1Player} highlight={true} />
           </div>
 
-          {/* 2. Top Bid Box (Directly Underneath) */}
-          <div className="w-full max-w-[300px] bg-slate-950/95 border-2 border-amber-500/70 rounded-2xl p-2.5 text-center shadow-xl mt-2">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+          {/* TOP BID Broadcast Plate */}
+          <div className="w-full bg-slate-950/95 border border-amber-500/60 rounded-lg p-2.5 text-center shadow-xl mt-2.5 relative overflow-hidden">
+            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">
               TOP BID
-            </span>
-            <div className="text-4xl font-black text-amber-400 my-0.5 font-mono tracking-tight drop-shadow-[0_2px_10px_rgba(245,158,11,0.5)]">
-              {currentBid} <span className="text-xl font-bold">M €</span>
+            </div>
+            <div className="font-mono-num text-4xl font-extrabold text-amber-400 my-0.5 tracking-tight">
+              {currentBid} <span className="font-display text-xl font-bold text-amber-300/90">M €</span>
             </div>
 
-            <div className="flex items-center justify-center gap-1.5 text-xs">
-              <span className="text-slate-400 font-semibold">LEADER:</span>
-              <span className={`font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
-                isP1Highest 
-                  ? 'bg-emerald-500 text-slate-950 shadow-md' 
-                  : isP2Highest 
-                  ? 'bg-rose-600 text-white shadow-md' 
-                  : 'bg-slate-800 text-slate-300'
-              }`}>
-                <span>{highestBidder?.avatar || '⚖️'}</span>
-                <span>{highestBidder?.name || 'NO BIDS'}</span>
+            <div className="flex items-center justify-center gap-2 text-xs mt-1">
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">LEADER:</span>
+              <span
+                className={`font-display text-xs font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-sm ${
+                  isP1Highest
+                    ? 'bg-emerald-500 text-slate-950'
+                    : isP2Highest
+                    ? 'bg-rose-600 text-white'
+                    : 'bg-slate-800 text-slate-300'
+                }`}
+              >
+                {highestBidder?.name || 'NO BIDS'}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Right Flank: P2's Current Bid Display (Opponent - RED) */}
-        <div className="col-span-3 flex flex-col items-center">
-          <div className={`w-full rounded-2xl p-3 border-2 text-center transition-all shadow-xl ${
-            isP2Highest 
-              ? 'bg-rose-950/60 border-rose-500 ring-2 ring-rose-500/50 shadow-rose-500/30' 
-              : 'bg-slate-950/90 border-rose-500/50 hover:border-rose-400'
-          }`}>
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <span className="text-base">{player2.avatar}</span>
-              <span className="text-xs font-black text-rose-400 uppercase truncate">
-                {player2.name}
-              </span>
+        {/* Right Flank: P2 Current Bid Stand (Opponent - RED BORDER) */}
+        <div className="col-span-3 flex flex-col justify-center">
+          <div
+            className={`w-full rounded-lg p-3 border-2 text-center transition-all relative overflow-hidden ${
+              isP2Highest
+                ? 'bg-rose-950/55 border-rose-500 shadow-[0_0_22px_rgba(244,63,94,0.3)]'
+                : 'bg-slate-950/85 border-rose-500/70'
+            }`}
+          >
+            {/* Top Red Team Stripe */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-rose-500" />
+
+            <div className="font-display text-sm font-extrabold text-rose-400 uppercase tracking-wide truncate mt-0.5">
+              {player2.name}
             </div>
-            
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+
+            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.14em] block mt-1">
               CURRENT BID
             </span>
 
-            <div className="text-3xl font-black font-mono my-1 tracking-tight text-white">
+            <div className="font-mono-num text-3xl font-extrabold my-1 tracking-tight text-white">
               {p2Passed ? (
-                <span className="text-sm text-slate-500 font-bold">PASS</span>
+                <span className="font-display text-lg text-slate-500 tracking-wider">PASS</span>
               ) : p2LastBid ? (
-                <span className={isP2Highest ? 'text-rose-400' : 'text-slate-300'}>
-                  {p2LastBid}<span className="text-base font-bold text-slate-400">M</span>
+                <span className={isP2Highest ? 'text-rose-400' : 'text-slate-200'}>
+                  {p2LastBid}
+                  <span className="text-sm font-bold text-slate-400 ml-0.5">M</span>
                 </span>
               ) : (
-                <span className="text-slate-600 text-xl font-bold">--</span>
+                <span className="text-slate-600 text-2xl">--</span>
               )}
             </div>
 
-            {/* Status Pill */}
             <div className="mt-1 flex justify-center">
               {p2Passed ? (
-                <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded-sm bg-slate-800 text-slate-400 uppercase tracking-wider">
                   PASSED
                 </span>
               ) : isP2Highest ? (
-                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-rose-600 text-white flex items-center gap-0.5 shadow">
-                  <CheckCircle2 className="w-2.5 h-2.5" /> LEADING
+                <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-sm bg-rose-600 text-white uppercase tracking-wider">
+                  LEADING
                 </span>
               ) : p2LastBid ? (
-                <span className="text-[9px] font-black px-2 py-0.5 rounded bg-amber-950/60 text-amber-400 border border-amber-500/40">
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded-sm bg-amber-950/70 text-amber-400 border border-amber-500/40 uppercase tracking-wider">
                   OUTBID
                 </span>
               ) : (
-                <span className="text-[9px] font-bold text-slate-500">
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
                   WAITING
                 </span>
               )}
             </div>
 
-            <div className="mt-2 pt-1.5 border-t border-slate-800/80 text-[10px] text-slate-400 font-mono">
-              BUDGET: <strong className="text-slate-200">{player2.budget}M</strong>
+            <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-xs font-mono-num bg-slate-900/80 px-2.5 py-1 rounded border border-rose-500/25">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">CÒN LẠI</span>
+              <strong className="text-amber-300 text-sm">{player2.budget}M €</strong>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Dual Bidding Controllers (P1 & P2) */}
-      <div className="pt-2 border-t border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* P1 Controller (Emerald) */}
-        <div className={`p-2.5 rounded-2xl border transition-all ${
-          isP1Highest 
-            ? 'bg-emerald-950/30 border-emerald-500 ring-1 ring-emerald-500/40' 
-            : 'bg-slate-950/80 border-slate-800'
-        }`}>
-          <div className="flex justify-between items-center mb-1.5">
-            <div className="flex items-center gap-1.5">
-              <span className="text-base">{player1.avatar}</span>
-              <span className="text-xs font-black text-emerald-400 uppercase">
+      {/* Bottom Dual Tactical Bidding Controllers */}
+      <div className="pt-3 border-t border-white/10 grid grid-cols-1 md:grid-cols-2 gap-3 relative z-10">
+        {/* P1 Controller (Green) */}
+        <div
+          className={`p-2.5 rounded-lg border transition-all ${
+            isP1Highest
+              ? 'bg-emerald-950/30 border-emerald-400'
+              : 'bg-slate-950/85 border-emerald-500/35'
+          }`}
+        >
+          <div className="flex justify-between items-center mb-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-1 h-4 bg-emerald-400 rounded-sm shrink-0" />
+              <span className="font-display text-sm font-extrabold text-emerald-400 uppercase tracking-wide truncate">
                 {player1.name}
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">
-                (MAX: <strong className="text-amber-400">{p1MaxBid}M</strong>)
+              <span className="text-[10px] text-slate-400 font-mono-num">
+                MAX <strong className="text-amber-400">{p1MaxBid}M</strong>
               </span>
             </div>
             {isP1Highest && (
-              <span className="text-[10px] font-black bg-emerald-500 text-slate-950 px-2 py-0.2 rounded-full flex items-center gap-0.5">
-                <CheckCircle2 className="w-3 h-3" /> LEADING
+              <span className="text-[9px] font-extrabold bg-emerald-500 text-slate-950 px-2 py-0.5 rounded-sm uppercase tracking-wider">
+                LEADING
               </span>
             )}
           </div>
 
           {p1Passed ? (
-            <div className="py-2 px-3 rounded-xl bg-slate-900 border border-slate-700 text-center text-xs text-slate-400 font-bold">
-              PASSED · WILL RECEIVE MID-TIER
+            <div className="py-2 px-3 rounded bg-slate-900 border border-slate-800 text-center text-xs text-slate-400 font-bold tracking-wider uppercase">
+              PASSED · RECEIVES ROLE PLAYER
             </div>
           ) : (
             <div className="grid grid-cols-5 gap-1.5">
-              <BidBtn label="+1M" amount={currentBid + 1} maxAllowed={p1MaxBid} onClick={() => onP1Bid(currentBid + 1)} disabled={!isAuctionActive || currentBid + 1 > p1MaxBid || isP1Highest || isP1Disabled} color="emerald" />
-              <BidBtn label="+2M" amount={currentBid + 2} maxAllowed={p1MaxBid} onClick={() => onP1Bid(currentBid + 2)} disabled={!isAuctionActive || currentBid + 2 > p1MaxBid || isP1Highest || isP1Disabled} color="emerald" />
-              <BidBtn label="+5M" amount={currentBid + 5} maxAllowed={p1MaxBid} onClick={() => onP1Bid(currentBid + 5)} disabled={!isAuctionActive || currentBid + 5 > p1MaxBid || isP1Highest || isP1Disabled} color="emerald" />
+              <BidBtn label="+1M" amount={currentBid + 1} onClick={() => onP1Bid(currentBid + 1)} disabled={!isAuctionActive || currentBid + 1 > p1MaxBid || isP1Highest || isP1Disabled} variant="green" />
+              <BidBtn label="+2M" amount={currentBid + 2} onClick={() => onP1Bid(currentBid + 2)} disabled={!isAuctionActive || currentBid + 2 > p1MaxBid || isP1Highest || isP1Disabled} variant="green" />
+              <BidBtn label="+5M" amount={currentBid + 5} onClick={() => onP1Bid(currentBid + 5)} disabled={!isAuctionActive || currentBid + 5 > p1MaxBid || isP1Highest || isP1Disabled} variant="green" />
               <button
                 onClick={() => onP1Bid(p1MaxBid)}
                 disabled={!isAuctionActive || currentBid >= p1MaxBid || isP1Highest || isP1Disabled}
-                className="py-2 px-1 rounded-xl text-xs font-black bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white disabled:opacity-30 disabled:pointer-events-none transition-all flex flex-col items-center justify-center shadow active:scale-95"
+                className="btn-bid-max py-1.5 px-1 rounded font-display font-extrabold text-xs disabled:opacity-30 disabled:pointer-events-none transition-all flex flex-col items-center justify-center cursor-pointer"
               >
-                <span className="flex items-center gap-0.5 leading-none text-[11px]">
-                  <Flame className="w-3 h-3 fill-white" /> MAX
-                </span>
-                <span className="text-[9px] font-mono opacity-85 leading-none mt-0.5">{p1MaxBid}M</span>
+                <span className="text-sm leading-none tracking-wider">MAX</span>
+                <span className="font-mono-num text-[9px] font-bold opacity-85 leading-none mt-0.5">{p1MaxBid}M</span>
               </button>
               <button
                 onClick={onP1Pass}
                 disabled={!isAuctionActive || isP1Highest || isP1Disabled}
-                className="py-2 px-1 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center active:scale-95"
+                className="py-1.5 px-1 rounded font-display text-sm font-bold tracking-wider bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 border-b-2 border-b-slate-950 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center cursor-pointer active:translate-y-px"
               >
                 PASS
               </button>
@@ -281,70 +481,68 @@ export default function AuctionArena1v1({
           )}
         </div>
 
-        {/* P2 Controller (Opponent - RED) */}
-        <div className={`p-2.5 rounded-2xl border-2 transition-all ${
-          isP2Highest 
-            ? 'bg-rose-950/30 border-rose-500 ring-1 ring-rose-500/40' 
-            : 'bg-slate-950/80 border-rose-500/60'
-        }`}>
-          <div className="flex justify-between items-center mb-1.5">
-            <div className="flex items-center gap-1.5">
-              <span className="text-base">{player2.avatar}</span>
-              <span className="text-xs font-black text-rose-400 uppercase">
+        {/* P2 Controller (Opponent - RED BORDER) */}
+        <div
+          className={`p-2.5 rounded-lg border-2 transition-all ${
+            isP2Highest
+              ? 'bg-rose-950/35 border-rose-500'
+              : 'bg-slate-950/85 border-rose-500/75'
+          }`}
+        >
+          <div className="flex justify-between items-center mb-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-1 h-4 bg-rose-500 rounded-sm shrink-0" />
+              <span className="font-display text-sm font-extrabold text-rose-400 uppercase tracking-wide truncate">
                 {player2.name}
               </span>
               <button
                 onClick={onToggleP2Bot}
                 disabled={isP2Disabled}
-                className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full border transition-all flex items-center gap-0.5 ${
-                  isP2Bot 
-                    ? 'bg-rose-900/60 border-rose-500 text-rose-300' 
-                    : 'bg-slate-800 border-slate-600 text-slate-300'
+                className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-sm border uppercase tracking-wider transition-all cursor-pointer ${
+                  isP2Bot
+                    ? 'bg-rose-900/70 border-rose-400 text-rose-200'
+                    : 'bg-slate-800 border-slate-600 text-slate-300 hover:border-slate-500'
                 }`}
-                title="Toggle Human vs AI Bot"
+                title="Chuyển đổi Người chơi / AI Bot"
               >
-                {isP2Bot ? <Bot className="w-2.5 h-2.5" /> : <User className="w-2.5 h-2.5" />}
-                <span>{isP2Bot ? 'BOT' : 'P2'}</span>
+                {isP2Bot ? 'BOT' : 'P2'}
               </button>
-              <span className="text-[10px] text-slate-400 font-mono">
-                (MAX: <strong className="text-amber-400">{p2MaxBid}M</strong>)
+              <span className="text-[10px] text-slate-400 font-mono-num">
+                MAX <strong className="text-amber-400">{p2MaxBid}M</strong>
               </span>
             </div>
             {isP2Highest && (
-              <span className="text-[10px] font-black bg-rose-600 text-white px-2 py-0.2 rounded-full flex items-center gap-0.5">
-                <CheckCircle2 className="w-3 h-3" /> LEADING
+              <span className="text-[9px] font-extrabold bg-rose-600 text-white px-2 py-0.5 rounded-sm uppercase tracking-wider">
+                LEADING
               </span>
             )}
           </div>
 
           {p2Passed ? (
-            <div className="py-2 px-3 rounded-xl bg-slate-900 border border-slate-700 text-center text-xs text-slate-400 font-bold">
-              PASSED · WILL RECEIVE MID-TIER
+            <div className="py-2 px-3 rounded bg-slate-900 border border-slate-800 text-center text-xs text-slate-400 font-bold tracking-wider uppercase">
+              PASSED · RECEIVES ROLE PLAYER
             </div>
           ) : isP2Bot ? (
-            <div className="py-2.5 px-3 rounded-xl bg-rose-950/40 border border-rose-800 text-center text-xs text-rose-300 flex items-center justify-center gap-1.5 font-bold">
-              <Bot className="w-3.5 h-3.5 animate-bounce text-rose-400" />
-              <span>AI BOT BIDDING...</span>
+            <div className="py-2 px-3 rounded bg-rose-950/40 border border-rose-500/40 text-center text-xs text-rose-300 font-bold tracking-wider uppercase">
+              AI BOT THINKING...
             </div>
           ) : (
             <div className="grid grid-cols-5 gap-1.5">
-              <BidBtn label="+1M" amount={currentBid + 1} maxAllowed={p2MaxBid} onClick={() => onP2Bid(currentBid + 1)} disabled={!isAuctionActive || currentBid + 1 > p2MaxBid || isP2Highest || isP2Disabled} color="red" />
-              <BidBtn label="+2M" amount={currentBid + 2} maxAllowed={p2MaxBid} onClick={() => onP2Bid(currentBid + 2)} disabled={!isAuctionActive || currentBid + 2 > p2MaxBid || isP2Highest || isP2Disabled} color="red" />
-              <BidBtn label="+5M" amount={currentBid + 5} maxAllowed={p2MaxBid} onClick={() => onP2Bid(currentBid + 5)} disabled={!isAuctionActive || currentBid + 5 > p2MaxBid || isP2Highest || isP2Disabled} color="red" />
+              <BidBtn label="+1M" amount={currentBid + 1} onClick={() => onP2Bid(currentBid + 1)} disabled={!isAuctionActive || currentBid + 1 > p2MaxBid || isP2Highest || isP2Disabled} variant="red" />
+              <BidBtn label="+2M" amount={currentBid + 2} onClick={() => onP2Bid(currentBid + 2)} disabled={!isAuctionActive || currentBid + 2 > p2MaxBid || isP2Highest || isP2Disabled} variant="red" />
+              <BidBtn label="+5M" amount={currentBid + 5} onClick={() => onP2Bid(currentBid + 5)} disabled={!isAuctionActive || currentBid + 5 > p2MaxBid || isP2Highest || isP2Disabled} variant="red" />
               <button
                 onClick={() => onP2Bid(p2MaxBid)}
                 disabled={!isAuctionActive || currentBid >= p2MaxBid || isP2Highest || isP2Disabled}
-                className="py-2 px-1 rounded-xl text-xs font-black bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white disabled:opacity-30 disabled:pointer-events-none transition-all flex flex-col items-center justify-center shadow active:scale-95"
+                className="btn-bid-max py-1.5 px-1 rounded font-display font-extrabold text-xs disabled:opacity-30 disabled:pointer-events-none transition-all flex flex-col items-center justify-center cursor-pointer"
               >
-                <span className="flex items-center gap-0.5 leading-none text-[11px]">
-                  <Flame className="w-3 h-3 fill-white" /> MAX
-                </span>
-                <span className="text-[9px] font-mono opacity-85 leading-none mt-0.5">{p2MaxBid}M</span>
+                <span className="text-sm leading-none tracking-wider">MAX</span>
+                <span className="font-mono-num text-[9px] font-bold opacity-85 leading-none mt-0.5">{p2MaxBid}M</span>
               </button>
               <button
                 onClick={onP2Pass}
                 disabled={!isAuctionActive || isP2Highest || isP2Disabled}
-                className="py-2 px-1 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center active:scale-95"
+                className="py-1.5 px-1 rounded font-display text-sm font-bold tracking-wider bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 border-b-2 border-b-slate-950 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center cursor-pointer active:translate-y-px"
               >
                 PASS
               </button>
@@ -356,24 +554,16 @@ export default function AuctionArena1v1({
   );
 }
 
-function BidBtn({ label, amount, maxAllowed, onClick, disabled, color = 'emerald' }) {
-  const isEmerald = color === 'emerald';
-  const isRed = color === 'red';
+function BidBtn({ label, onClick, disabled, variant = 'green' }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`py-2 px-1 rounded-xl font-black text-xs transition-all active:scale-95 flex flex-col items-center justify-center shadow disabled:opacity-30 disabled:pointer-events-none ${
-        isEmerald 
-          ? 'bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950' 
-          : 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white border border-rose-400/40 shadow-rose-900/40'
-      }`}
+      className={`${
+        variant === 'green' ? 'btn-bid-green' : 'btn-bid-red'
+      } py-2 px-1 rounded font-display font-extrabold transition-all flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none cursor-pointer`}
     >
-      <span className="flex items-center gap-0.5 leading-none">
-        <ArrowUpCircle className="w-3 h-3" />
-        {label}
-      </span>
-      <span className="text-[9px] font-mono opacity-85 leading-none mt-0.5">({amount}M)</span>
+      <span className="text-sm leading-none tracking-wider">{label}</span>
     </button>
   );
 }

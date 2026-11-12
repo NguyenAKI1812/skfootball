@@ -1,70 +1,148 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-display: 'Barlow Condensed', 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
   body {
-    @apply bg-slate-950 text-slate-100 font-sans antialiased min-h-screen selection:bg-amber-500 selection:text-black;
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(30, 58, 138, 0.25) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(13, 148, 136, 0.2) 0px, transparent 50%),
-      radial-gradient(at 50% 50%, rgba(15, 23, 42, 1) 0px, rgba(2, 6, 23, 1) 100%);
+    font-family: var(--font-sans);
+    background-color: #070b12;
+    color: #f1f5f9;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    /* Stadium floodlight night ambiance + subtle tactical micro-grid */
+    background-image:
+      radial-gradient(ellipse 65% 45% at 15% 0%, rgba(16, 185, 129, 0.14) 0%, transparent 70%),
+      radial-gradient(ellipse 65% 45% at 85% 0%, rgba(244, 63, 94, 0.15) 0%, transparent 70%),
+      radial-gradient(circle at 50% 45%, #0f172a 0%, #070b12 75%),
+      linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 36px 36px, 36px 36px;
   }
 }
 
-/* Custom Soccer Pitch styling */
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Broadcast Panel - sharp athletic geometry instead of generic bubbly SaaS cards */
+.broadcast-panel {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.94) 0%, rgba(9, 13, 22, 0.98) 100%);
+  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Authentic Mowed Football Turf */
 .soccer-pitch {
-  background: 
+  background-color: #14532d;
+  background-image:
+    radial-gradient(circle at 50% 48%, rgba(255, 255, 255, 0.09) 0%, rgba(0, 0, 0, 0.28) 85%),
     repeating-linear-gradient(
       0deg,
-      #15803d,
-      #15803d 40px,
-      #166534 40px,
-      #166534 80px
+      rgba(22, 101, 52, 0.95) 0px,
+      rgba(22, 101, 52, 0.95) 42px,
+      rgba(20, 83, 45, 0.95) 42px,
+      rgba(20, 83, 45, 0.95) 84px
     );
   position: relative;
-  border: 3px solid rgba(255, 255, 255, 0.6);
-  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  box-shadow:
+    inset 0 0 48px rgba(0, 0, 0, 0.55),
+    0 12px 28px rgba(0, 0, 0, 0.6);
 }
 
-.pitch-line {
-  border-color: rgba(255, 255, 255, 0.5);
-}
-
-/* Gold shimmer effect for Tier 1 Legend Cards */
+/* FUT-style Player Cards */
 @keyframes goldShimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% { transform: translateX(-140%) skewX(-20deg); }
+  100% { transform: translateX(240%) skewX(-20deg); }
 }
 
-.tier1-card {
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  border: 2px solid #f59e0b;
-  box-shadow: 0 0 25px rgba(245, 158, 11, 0.35);
+.fut-card-gold {
+  background: linear-gradient(155deg, #2d2310 0%, #161a24 45%, #1e180b 100%);
+  border: 1.5px solid rgba(245, 158, 11, 0.85);
+  box-shadow:
+    0 14px 32px -6px rgba(0, 0, 0, 0.85),
+    0 0 28px -4px rgba(245, 158, 11, 0.28),
+    inset 0 1px 0 rgba(253, 224, 71, 0.4);
   position: relative;
+  overflow: hidden;
 }
 
-.tier1-card::before {
+.fut-card-gold::after {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.15), transparent);
-  background-size: 200% 100%;
-  animation: goldShimmer 4s infinite linear;
+  top: 0;
+  left: 0;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(253, 224, 71, 0.14), transparent);
+  animation: goldShimmer 4.5s infinite ease-in-out;
   pointer-events: none;
-  border-radius: inherit;
 }
 
-.tier2-card {
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  border: 1px solid #94a3b8;
-  box-shadow: 0 0 15px rgba(148, 163, 184, 0.2);
+.fut-card-silver {
+  background: linear-gradient(155deg, #1e293b 0%, #0f172a 55%, #1e293b 100%);
+  border: 1.5px solid rgba(148, 163, 184, 0.65);
+  box-shadow:
+    0 12px 24px -6px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 rgba(226, 232, 240, 0.25);
+  position: relative;
+  overflow: hidden;
 }
 
-/* Pulsing heart/urgent countdown */
+/* Tactile Arcade/Broadcast Bid Buttons */
+.btn-bid-green {
+  background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+  border-bottom: 3px solid #047857;
+  color: #022c22;
+}
+.btn-bid-green:hover:not(:disabled) {
+  background: linear-gradient(180deg, #34d399 0%, #10b981 100%);
+}
+.btn-bid-green:active:not(:disabled) {
+  transform: translateY(1px);
+  border-bottom-width: 1px;
+}
+
+.btn-bid-red {
+  background: linear-gradient(180deg, #f43f5e 0%, #e11d48 100%);
+  border-bottom: 3px solid #9f1239;
+  color: #ffffff;
+}
+.btn-bid-red:hover:not(:disabled) {
+  background: linear-gradient(180deg, #fb7185 0%, #f43f5e 100%);
+}
+.btn-bid-red:active:not(:disabled) {
+  transform: translateY(1px);
+  border-bottom-width: 1px;
+}
+
+.btn-bid-max {
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+  border-bottom: 3px solid #92400e;
+  color: #1c1917;
+}
+.btn-bid-max:hover:not(:disabled) {
+  background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+}
+.btn-bid-max:active:not(:disabled) {
+  transform: translateY(1px);
+  border-bottom-width: 1px;
+}
+
+/* Urgent Timer Pulse */
 @keyframes urgentPulse {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.08); }
+  50% { transform: scale(1.06); }
 }
 
 .timer-urgent {
-  animation: urgentPulse 0.5s infinite;
+  animation: urgentPulse 0.55s infinite ease-in-out;
 }

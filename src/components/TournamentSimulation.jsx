@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Trophy, Play, RotateCcw, Award, Shield, Flame } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { sounds } from '../utils/sound';
 
 export default function TournamentSimulation({ managers, onRestart }) {
@@ -93,11 +92,6 @@ export default function TournamentSimulation({ managers, onRestart }) {
     setStage('finished');
 
     sounds.playFanfare();
-    confetti({
-      particleCount: 120,
-      spread: 90,
-      origin: { y: 0.5 }
-    });
   };
 
   return (

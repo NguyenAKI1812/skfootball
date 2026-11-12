@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   TIER_1_PLAYERS, 
   TIER_2_PLAYERS, 
@@ -25,7 +25,12 @@ import {
 
 export default function App() {
   const [isMuted, setIsMuted] = useState(false);
-  const [gameState, setGameState] = useState('auction'); // 'auction', 'round_result', 'final_match'
+  const [gameState, setGameState] = useState('lobby'); // 'lobby', 'auction', 'round_result', 'tactics', 'final_match'
+  const [p1AuctionReady, setP1AuctionReady] = useState(false);
+  const [p2AuctionReady, setP2AuctionReady] = useState(false);
+  const [tacticsTimeLeft, setTacticsTimeLeft] = useState(30);
+  const [p1TacticsReady, setP1TacticsReady] = useState(false);
+  const [p2TacticsReady, setP2TacticsReady] = useState(false);
 
   // Modals
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -45,7 +50,7 @@ export default function App() {
   // Player 1 & Player 2 Managers (Customizable Names & Avatars)
   const [player1, setPlayer1] = useState({
     id: 'p1',
-    name: 'HLV 1 (Xanh)',
+    name: 'HLV 1 (Bạn)',
     avatar: '🟢',
     budget: 100,
     color: '#10b981',
@@ -54,7 +59,7 @@ export default function App() {
 
   const [player2, setPlayer2] = useState({
     id: 'p2',
-    name: 'HLV 2 (Đỏ)',
+    name: 'HLV 2 (Đối thủ)',
     avatar: '🔴',
     budget: 100,
     color: '#ef4444',
@@ -66,6 +71,7 @@ export default function App() {
   // Auction State within current round
   const [currentTier1Player, setCurrentTier1Player] = useState(null);
   const [usedPlayerIds, setUsedPlayerIds] = useState(new Set());
+  const usedPlayerIdsRef = useRef(new Set());
   const [timeLeft, setTimeLeft] = useState(10);
   const [currentBid, setCurrentBid] = useState(5);
   const [highestBidder, setHighestBidder] = useState(null);
@@ -96,13 +102,31 @@ export default function App() {
   const p1MaxBid = calcMaxBid(player1);
   const p2MaxBid = calcMaxBid(player2);
 
-  // Helper: select random player of exact required category
+  // Helper: build full set of already-used player IDs (ref + both squads)
+  const buildExcludedIds = (baseSet = usedPlayerIdsRef.current) => {
+    const excluded = new Set(baseSet);
+    Object.values(player1.squad || {}).forEach(p => { if (p?.id) excluded.add(p.id); });
+    Object.values(player2.squad || {}).forEach(p => { if (p?.id) excluded.add(p.id); });
+    return excluded;
+  };
+
+  // Helper: select random player of exact required category without duplicates
   const selectPlayerForCategory = (pool, category, excludeIds) => {
     const matching = pool.filter(p => !excludeIds.has(p.id) && p.position === category);
     if (matching.length > 0) {
       return matching[Math.floor(Math.random() * matching.length)];
     }
+    const anyUnused = pool.filter(p => !excludeIds.has(p.id));
+    if (anyUnused.length > 0) {
+      return anyUnused[Math.floor(Math.random() * anyUnused.length)];
+    }
     return pool.find(p => p.position === category) || pool[0];
+  };
+
+  const markPlayerUsed = (playerId) => {
+    if (!playerId) return;
+    usedPlayerIdsRef.current.add(playerId);
+    setUsedPlayerIds(new Set(usedPlayerIdsRef.current));
   };
 
   // Helper: candidate slots respecting CAM / CDM mutual exclusion
@@ -122,15 +146,17 @@ export default function App() {
   // Initialize first round
   useEffect(() => {
     const cat = schedule[0].category;
-    const p = selectPlayerForCategory(TIER_1_PLAYERS, cat, usedPlayerIds);
+    const excluded = buildExcludedIds();
+    const p = selectPlayerForCategory(TIER_1_PLAYERS, cat, excluded);
+    markPlayerUsed(p?.id);
     setCurrentTier1Player(p);
-    setCurrentBid(5);
+    setCurrentBid(1);
     setTimeLeft(10);
     setHighestBidder(null);
     setBidHistory([]);
     setP1Passed(false);
     setP2Passed(false);
-    setIsAuctionActive(true);
+    setIsAuctionActive(false);
 
     // Auto-check URL for ?room=ROOM_CODE to join online immediately
     if (typeof window !== 'undefined') {
@@ -161,6 +187,12 @@ export default function App() {
     if (msg.type === 'BID') {
       const manager = msg.playerRole === 'p1' ? player1 : player2;
       handleLocalBid(manager, msg.amount, false);
+    } else if (msg.type === 'AUCTION_READY') {
+      if (msg.playerRole === 'p1') setP1AuctionReady(Boolean(msg.ready));
+      if (msg.playerRole === 'p2') setP2AuctionReady(Boolean(msg.ready));
+    } else if (msg.type === 'TACTICS_READY') {
+      if (msg.playerRole === 'p1') setP1TacticsReady(Boolean(msg.ready));
+      if (msg.playerRole === 'p2') setP2TacticsReady(Boolean(msg.ready));
     } else if (msg.type === 'PASS') {
       if (msg.playerRole === 'p1') setP1Passed(true);
       if (msg.playerRole === 'p2') setP2Passed(true);
@@ -204,6 +236,82 @@ export default function App() {
   const handleDisconnectOnline = () => {
     onlineSync.disconnect();
     setOnlineState({ isConnected: false, role: null, roomCode: null });
+  };
+
+  // Start Round 1 only when BOTH players are ready
+  useEffect(() => {
+    if (gameState !== 'lobby') return;
+    if (isP2Bot && !p2AuctionReady) {
+      setP2AuctionReady(true);
+      return;
+    }
+    if (p1AuctionReady && p2AuctionReady) {
+      sounds.playWhistle();
+      setTimeLeft(10);
+      setIsAuctionActive(true);
+      setGameState('auction');
+    }
+  }, [gameState, p1AuctionReady, p2AuctionReady, isP2Bot]);
+
+  const handleToggleAuctionReady = (role) => {
+    if (role === 'p1') {
+      if (onlineState.isConnected && onlineState.role !== 'host') return;
+      const next = !p1AuctionReady;
+      setP1AuctionReady(next);
+      if (onlineState.isConnected) {
+        onlineSync.send({ type: 'AUCTION_READY', playerRole: 'p1', ready: next });
+      }
+    } else {
+      if (onlineState.isConnected && onlineState.role !== 'guest') return;
+      if (isP2Bot) return;
+      const next = !p2AuctionReady;
+      setP2AuctionReady(next);
+      if (onlineState.isConnected) {
+        onlineSync.send({ type: 'AUCTION_READY', playerRole: 'p2', ready: next });
+      }
+    }
+  };
+
+  // 30s Tactics Squad Arrangement phase after all 11 players are drafted
+  useEffect(() => {
+    if (gameState !== 'tactics') return;
+    if (isP2Bot && !p2TacticsReady) {
+      setP2TacticsReady(true);
+      return;
+    }
+    if (p1TacticsReady && p2TacticsReady) {
+      sounds.playFanfare();
+      setGameState('final_match');
+      return;
+    }
+    if (tacticsTimeLeft <= 0) {
+      sounds.playFanfare();
+      setGameState('final_match');
+      return;
+    }
+    const timer = setTimeout(() => {
+      setTacticsTimeLeft(t => t - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [gameState, tacticsTimeLeft, p1TacticsReady, p2TacticsReady, isP2Bot]);
+
+  const handleToggleTacticsReady = (role) => {
+    if (role === 'p1') {
+      if (onlineState.isConnected && onlineState.role !== 'host') return;
+      const next = !p1TacticsReady;
+      setP1TacticsReady(next);
+      if (onlineState.isConnected) {
+        onlineSync.send({ type: 'TACTICS_READY', playerRole: 'p1', ready: next });
+      }
+    } else {
+      if (onlineState.isConnected && onlineState.role !== 'guest') return;
+      if (isP2Bot) return;
+      const next = !p2TacticsReady;
+      setP2TacticsReady(next);
+      if (onlineState.isConnected) {
+        onlineSync.send({ type: 'TACTICS_READY', playerRole: 'p2', ready: next });
+      }
+    }
   };
 
   // Profile Save
@@ -269,7 +377,8 @@ export default function App() {
     if (manager.id === player2.id && p2Passed) return;
 
     const maxAllowed = manager.id === player1.id ? p1MaxBid : p2MaxBid;
-    if (amount <= currentBid || amount > maxAllowed) return;
+    const minValid = highestBidder ? currentBid + 1 : 1;
+    if (amount < minValid || amount > maxAllowed) return;
 
     setCurrentBid(amount);
     setHighestBidder(manager);
@@ -319,19 +428,19 @@ export default function App() {
 
     if (!winner) {
       winner = Math.random() > 0.5 ? player1 : player2;
-      finalWinningBid = 5;
+      finalWinningBid = 1;
     }
 
     const loser = winner.id === player1.id ? player2 : player1;
 
     // Pick Tier 2 player of the EXACT SAME category
     const targetCategory = currentRoundInfo.category;
-    const newUsed = new Set(usedPlayerIds);
-    newUsed.add(currentTier1Player.id);
-
-    const tier2 = selectPlayerForCategory(TIER_2_PLAYERS, targetCategory, newUsed);
-    newUsed.add(tier2.id);
-    setUsedPlayerIds(newUsed);
+    if (currentTier1Player?.id) {
+      usedPlayerIdsRef.current.add(currentTier1Player.id);
+    }
+    const excluded = buildExcludedIds();
+    const tier2 = selectPlayerForCategory(TIER_2_PLAYERS, targetCategory, excluded);
+    markPlayerUsed(tier2?.id);
 
     // Compute candidate slots for P1 and P2 respecting CAM/CDM mutual exclusion
     const p1OpenSlots = getAvailableCandidateSlots(player1.squad, targetCategory);
@@ -393,19 +502,24 @@ export default function App() {
       });
     }
 
-    // Go to next round or final match
+    // Go to 30s tactics rearrangement phase after all 11 players are drafted
     const nextIdx = currentRoundIdx + 1;
     if (nextIdx >= schedule.length) {
-      setGameState('final_match');
-      sounds.playFanfare();
+      setTacticsTimeLeft(30);
+      setP1TacticsReady(false);
+      setP2TacticsReady(isP2Bot);
+      setGameState('tactics');
+      sounds.playWhistle();
       return;
     }
 
     setCurrentRoundIdx(nextIdx);
     const nextCat = schedule[nextIdx].category;
-    const nextT1 = selectPlayerForCategory(TIER_1_PLAYERS, nextCat, usedPlayerIds);
+    const excluded = buildExcludedIds();
+    const nextT1 = selectPlayerForCategory(TIER_1_PLAYERS, nextCat, excluded);
+    markPlayerUsed(nextT1?.id);
     setCurrentTier1Player(nextT1);
-    setCurrentBid(5);
+    setCurrentBid(1);
     setTimeLeft(10);
     setHighestBidder(null);
     setBidHistory([]);
@@ -445,19 +559,26 @@ export default function App() {
     setSchedule(newSchedule);
     setPlayer1(p => ({ ...p, budget: 100, squad: {} }));
     setPlayer2(p => ({ ...p, budget: 100, squad: {} }));
+    usedPlayerIdsRef.current = new Set();
     setUsedPlayerIds(new Set());
     setCurrentRoundIdx(0);
     const firstCat = newSchedule[0].category;
-    const firstT1 = selectPlayerForCategory(TIER_1_PLAYERS, firstCat, new Set());
+    const firstT1 = selectPlayerForCategory(TIER_1_PLAYERS, firstCat, usedPlayerIdsRef.current);
+    markPlayerUsed(firstT1?.id);
     setCurrentTier1Player(firstT1);
-    setCurrentBid(5);
+    setCurrentBid(1);
     setTimeLeft(10);
     setHighestBidder(null);
     setBidHistory([]);
     setP1Passed(false);
     setP2Passed(false);
-    setIsAuctionActive(true);
-    setGameState('auction');
+    setP1AuctionReady(false);
+    setP2AuctionReady(isP2Bot);
+    setTacticsTimeLeft(30);
+    setP1TacticsReady(false);
+    setP2TacticsReady(isP2Bot);
+    setIsAuctionActive(false);
+    setGameState('lobby');
 
     if (broadcast && onlineState.isConnected) {
       onlineSync.send({ type: 'RESTART' });
@@ -474,92 +595,104 @@ export default function App() {
   const isP2Disabled = onlineState.isConnected && onlineState.role !== 'guest';
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* Top Header */}
-      <header className="border-b border-slate-800/80 bg-slate-900/70 backdrop-blur-md px-6 py-2.5 sticky top-0 z-40 flex justify-between items-center shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-slate-950 font-black shadow-md shadow-amber-500/20">
-            <Trophy className="w-5 h-5" />
-          </div>
+    <div className="min-h-screen text-slate-100 flex flex-col relative">
+      {/* Full-Web Half-Screen Background Light for Current Highest Bidder */}
+      <div
+        className={`fixed inset-y-0 left-0 w-1/2 pointer-events-none transition-opacity duration-500 z-0 bg-gradient-to-r from-emerald-500/45 via-emerald-500/22 to-transparent ${
+          gameState === 'auction' && highestBidder?.id === player1.id ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+      <div
+        className={`fixed inset-y-0 right-0 w-1/2 pointer-events-none transition-opacity duration-500 z-0 bg-gradient-to-l from-rose-500/45 via-rose-500/22 to-transparent ${
+          gameState === 'auction' && highestBidder?.id === player2.id ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+
+      {/* Broadcast Top Bar */}
+      <header className="border-b border-white/10 bg-slate-950/85 backdrop-blur-md px-5 py-2.5 sticky top-0 z-40 flex flex-wrap gap-3 justify-between items-center">
+        <div className="flex items-center gap-2.5">
+          <span className="w-1.5 h-7 bg-amber-400 rounded-sm" />
           <div>
-            <h1 className="text-base font-black text-white tracking-wide flex items-center gap-2">
+            <h1 className="font-display text-xl font-extrabold text-white tracking-wider uppercase leading-none flex items-center gap-2">
               FOOTBALL AUCTION 1V1
               {onlineState.isConnected && (
-                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 flex items-center gap-1 shadow">
-                  <Wifi className="w-3 h-3" /> ONLINE ({onlineState.roomCode})
+                <span className="text-[10px] font-sans font-extrabold uppercase px-2 py-0.5 rounded-sm bg-emerald-500 text-slate-950 tracking-wider">
+                  ONLINE · {onlineState.roomCode}
                 </span>
               )}
             </h1>
           </div>
         </div>
 
-        {/* Global Summary Badge: P1 vs P2 Budgets & Click to Rename */}
-        <div className="flex items-center gap-3">
-          <div 
+        {/* TV Broadcast Scorebug: P1 vs P2 */}
+        <div className="flex items-stretch rounded overflow-hidden border border-slate-800 bg-slate-900/90 shadow-lg">
+          <button
+            type="button"
             onClick={() => setShowProfileModal(true)}
-            className="flex items-center gap-2 px-3 py-1 rounded-xl border border-emerald-500/50 bg-emerald-950/40 text-xs cursor-pointer hover:border-emerald-400 transition-all shadow-sm"
+            className="flex items-center gap-2.5 px-3 py-1.5 border-l-4 border-l-emerald-400 hover:bg-slate-800/70 transition-colors cursor-pointer text-xs"
             title="Bấm để đổi tên HLV 1"
           >
-            <span>{player1.avatar}</span>
-            <span className="font-extrabold text-emerald-300">{player1.name}</span>
-            <span className="font-mono font-black text-amber-400">{player1.budget}M €</span>
-            <span className="text-[10px] bg-black/40 px-1 rounded text-slate-400 font-bold">
+            <span className="font-display text-sm font-extrabold text-emerald-400 uppercase tracking-wide">
+              {player1.name}
+            </span>
+            <span className="font-mono-num font-bold text-amber-400">{player1.budget}M</span>
+            <span className="font-mono-num text-[10px] bg-slate-950 px-1.5 py-0.5 rounded-sm text-slate-300 border border-slate-800">
               {Object.keys(player1.squad).length}/11
             </span>
+          </button>
+
+          <div className="px-2.5 flex items-center justify-center bg-slate-950 border-x border-slate-800 font-display text-xs font-extrabold text-slate-400 tracking-widest">
+            VS
           </div>
 
-          <span className="text-xs font-black text-slate-500">VS</span>
-
-          <div 
+          <button
+            type="button"
             onClick={() => setShowProfileModal(true)}
-            className="flex items-center gap-2 px-3 py-1 rounded-xl border-2 border-rose-500/60 bg-rose-950/40 text-xs cursor-pointer hover:border-rose-400 transition-all shadow-sm"
+            className="flex items-center gap-2.5 px-3 py-1.5 border-r-4 border-r-rose-500 border-y border-y-rose-500/40 bg-rose-950/20 hover:bg-rose-950/35 transition-colors cursor-pointer text-xs"
             title="Bấm để đổi tên HLV 2 (Đối thủ)"
           >
-            <span>{player2.avatar}</span>
-            <span className="font-extrabold text-rose-400">{player2.name}</span>
-            <span className="font-mono font-black text-amber-400">{player2.budget}M €</span>
-            <span className="text-[10px] bg-black/40 px-1 rounded text-slate-400 font-bold">
+            <span className="font-mono-num text-[10px] bg-slate-950 px-1.5 py-0.5 rounded-sm text-slate-300 border border-rose-500/30">
               {Object.keys(player2.squad).length}/11
             </span>
-          </div>
+            <span className="font-mono-num font-bold text-amber-400">{player2.budget}M</span>
+            <span className="font-display text-sm font-extrabold text-rose-400 uppercase tracking-wide">
+              {player2.name}
+            </span>
+          </button>
         </div>
 
-        {/* Action Controls */}
+        {/* Minimal Utility Controls */}
         <div className="flex items-center gap-2">
-          {/* Profile / Rename Button */}
           <button
             onClick={() => setShowProfileModal(true)}
-            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors"
+            className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
             title="Đổi tên & avatar HLV"
           >
-            <Edit3 className="w-3.5 h-3.5 text-amber-400" />
-            <span>Đặt Tên</span>
+            Đặt Tên
           </button>
 
-          {/* Online Multiplayer Room Button */}
           <button
             onClick={() => setShowOnlineModal(true)}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-black flex items-center gap-1.5 transition-all shadow ${
-              onlineState.isConnected 
-                ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300' 
-                : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white border-cyan-400/50'
+            className={`px-3 py-1.5 rounded border text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+              onlineState.isConnected
+                ? 'bg-emerald-950/70 border-emerald-500 text-emerald-300'
+                : 'bg-sky-700 hover:bg-sky-600 text-white border-sky-500/60'
             }`}
           >
-            <Globe className="w-3.5 h-3.5" />
-            <span>{onlineState.isConnected ? 'Phòng Online' : 'Chơi Online'}</span>
+            {onlineState.isConnected ? 'Phòng Online' : 'Chơi Online'}
           </button>
 
-          <button 
+          <button
             onClick={toggleSound}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
-            title={isMuted ? "Unmute" : "Mute"}
+            className="p-2 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-colors cursor-pointer"
+            title={isMuted ? "Bật âm thanh" : "Tắt âm thanh"}
           >
-            {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
+            {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
           </button>
-          <button 
+          <button
             onClick={() => handleRestart(true)}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
-            title="Restart Draft"
+            className="p-2 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-colors cursor-pointer"
+            title="Chơi lại từ đầu"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -567,7 +700,7 @@ export default function App() {
       </header>
 
       {/* Main Content Area: Centered Vertically on Desktop */}
-      <main className="flex-1 p-3.5 max-w-[1700px] mx-auto w-full flex flex-col justify-center">
+      <main className="flex-1 p-3.5 max-w-[1700px] mx-auto w-full flex flex-col justify-center relative z-10">
         {gameState === 'final_match' ? (
           <HeadToHeadMatch 
             player1={player1} 
@@ -587,6 +720,7 @@ export default function App() {
                 budget={player1.budget} 
                 title={player1.name} 
                 isOpponent={false}
+                allowCamCdmChoice={gameState === 'tactics'}
                 onSwap={onlineState.role === 'guest' ? null : handleP1Swap}
               />
             </div>
@@ -617,6 +751,17 @@ export default function App() {
                 isAuctionActive={isAuctionActive}
                 isP1Disabled={isP1Disabled}
                 isP2Disabled={isP2Disabled}
+                isLobby={gameState === 'lobby'}
+                p1Ready={p1AuctionReady}
+                p2Ready={p2AuctionReady}
+                onP1Ready={() => handleToggleAuctionReady('p1')}
+                onP2Ready={() => handleToggleAuctionReady('p2')}
+                isTactics={gameState === 'tactics'}
+                tacticsTimeLeft={tacticsTimeLeft}
+                p1TacticsReady={p1TacticsReady}
+                p2TacticsReady={p2TacticsReady}
+                onP1TacticsReady={() => handleToggleTacticsReady('p1')}
+                onP2TacticsReady={() => handleToggleTacticsReady('p2')}
               />
             </div>
 
@@ -627,6 +772,7 @@ export default function App() {
                 budget={player2.budget} 
                 title={player2.name} 
                 isOpponent={true}
+                allowCamCdmChoice={gameState === 'tactics'}
                 onSwap={onlineState.role === 'host' ? null : handleP2Swap}
               />
             </div>
