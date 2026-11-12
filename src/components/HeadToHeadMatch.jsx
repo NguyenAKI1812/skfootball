@@ -27,6 +27,7 @@ export default function HeadToHeadMatch({
   const [activeHighlight, setActiveHighlight] = useState(null);
   const [highlightCountdown, setHighlightCountdown] = useState(3);
   const [eventsTimeline, setEventsTimeline] = useState([]);
+  const [preGeneratedPenalties, setPreGeneratedPenalties] = useState(null);
   const [completedEvents, setCompletedEvents] = useState([]);
   const [winner, setWinner] = useState(null);
   const [mvp, setMvp] = useState(null);
@@ -289,12 +290,77 @@ export default function HeadToHeadMatch({
     const allPlayersWithGoals = finalEvents.filter(e => e.type === 'GOAL').map(e => e.player);
     const mvpPlayer = allPlayersWithGoals.length > 0 ? allPlayersWithGoals[0] : (t1.squadList[0] || t2.squadList[0]);
 
+    // Pre-generate penalty kicks if 90' ends in a tie so Host & Guest stay 100% synced
+    let penaltyKicksScript = null;
+    if (runningScore1 === runningScore2) {
+      penaltyKicksScript = buildPenaltyKicks();
+    }
+
     return { 
       events: finalEvents, 
       finalG1: runningScore1, 
       finalG2: runningScore2,
-      mvp: mvpPlayer
+      mvp: mvpPlayer,
+      penaltyKicks: penaltyKicksScript
     };
+  };
+
+  const buildPenaltyKicks = () => {
+    const kicks = [];
+    let p1Wins = 0;
+    let p2Wins = 0;
+
+    const p1Shooters = [...t1.fws, ...t1.mfs, ...t1.dfs];
+    const p2Shooters = [...t2.fws, ...t2.mfs, ...t2.dfs];
+    const p1Gk = t1.gks[0] || t1.squadList[0];
+    const p2Gk = t2.gks[0] || t2.squadList[0];
+
+    for (let round = 1; round <= 5; round++) {
+      const p1Scores = Math.random() > 0.25;
+      if (p1Scores) p1Wins++;
+      kicks.push({
+        round,
+        team: 1,
+        shooter: p1Shooters[round % p1Shooters.length],
+        gk: p2Gk,
+        scored: p1Scores
+      });
+
+      const p2Scores = Math.random() > 0.25;
+      if (p2Scores) p2Wins++;
+      kicks.push({
+        round,
+        team: 2,
+        shooter: p2Shooters[round % p2Shooters.length],
+        gk: p1Gk,
+        scored: p2Scores
+      });
+    }
+
+    let sdRound = 6;
+    while (p1Wins === p2Wins && sdRound <= 12) {
+      const p1Sd = Math.random() > 0.3;
+      const p2Sd = sdRound === 12 ? !p1Sd : Math.random() > 0.3;
+      if (p1Sd) p1Wins++;
+      if (p2Sd) p2Wins++;
+      kicks.push({
+        round: sdRound,
+        team: 1,
+        shooter: p1Shooters[(sdRound - 1) % p1Shooters.length],
+        gk: p2Gk,
+        scored: p1Sd
+      });
+      kicks.push({
+        round: sdRound,
+        team: 2,
+        shooter: p2Shooters[(sdRound - 1) % p2Shooters.length],
+        gk: p1Gk,
+        scored: p2Sd
+      });
+      sdRound++;
+    }
+
+    return kicks;
   };
 
   // 3. Online & Bot Ready Handling
@@ -318,6 +384,7 @@ export default function HeadToHeadMatch({
     } else if (matchRemoteMsg.type === 'MATCH_START_SIM') {
       setEventsTimeline(matchRemoteMsg.script.events);
       setMvp(matchRemoteMsg.script.mvp);
+      setPreGeneratedPenalties(matchRemoteMsg.script.penaltyKicks || null);
       setMatchPhase('countdown');
     }
   }, [matchRemoteMsg]);
@@ -350,6 +417,7 @@ export default function HeadToHeadMatch({
           const script = generateMatchScript();
           setEventsTimeline(script.events);
           setMvp(script.mvp);
+          setPreGeneratedPenalties(script.penaltyKicks || null);
           if (onSendMatchMessage) {
             onSendMatchMessage({ type: 'MATCH_START_SIM', script });
           }
@@ -359,6 +427,7 @@ export default function HeadToHeadMatch({
         const script = generateMatchScript();
         setEventsTimeline(script.events);
         setMvp(script.mvp);
+        setPreGeneratedPenalties(script.penaltyKicks || null);
         setMatchPhase('countdown');
       }
     }
@@ -471,62 +540,8 @@ export default function HeadToHeadMatch({
   // 5. Penalty Shootout Engine (If 90' Ends In A Draw)
   const startPenaltyShootout = (s1, s2) => {
     setMatchPhase('penalty');
-    
-    // Generate 5 kicks for each side
-    const kicks = [];
-    let p1Wins = 0;
-    let p2Wins = 0;
 
-    const p1Shooters = [...t1.fws, ...t1.mfs, ...t1.dfs];
-    const p2Shooters = [...t2.fws, ...t2.mfs, ...t2.dfs];
-    const p1Gk = t1.gks[0] || t1.squadList[0];
-    const p2Gk = t2.gks[0] || t2.squadList[0];
-
-    for (let round = 1; round <= 5; round++) {
-      const p1Scores = Math.random() > 0.25; // 75% penalty conversion
-      if (p1Scores) p1Wins++;
-      kicks.push({
-        round,
-        team: 1,
-        shooter: p1Shooters[round % p1Shooters.length],
-        gk: p2Gk,
-        scored: p1Scores
-      });
-
-      const p2Scores = Math.random() > 0.25;
-      if (p2Scores) p2Wins++;
-      kicks.push({
-        round,
-        team: 2,
-        shooter: p2Shooters[round % p2Shooters.length],
-        gk: p1Gk,
-        scored: p2Scores
-      });
-    }
-
-    // Fair Sudden Death rounds if still tied after 5 kicks
-    let sdRound = 6;
-    while (p1Wins === p2Wins && sdRound <= 12) {
-      const p1Sd = Math.random() > 0.3;
-      const p2Sd = sdRound === 12 ? !p1Sd : Math.random() > 0.3;
-      if (p1Sd) p1Wins++;
-      if (p2Sd) p2Wins++;
-      kicks.push({
-        round: sdRound,
-        team: 1,
-        shooter: p1Shooters[(sdRound - 1) % p1Shooters.length],
-        gk: p2Gk,
-        scored: p1Sd
-      });
-      kicks.push({
-        round: sdRound,
-        team: 2,
-        shooter: p2Shooters[(sdRound - 1) % p2Shooters.length],
-        gk: p1Gk,
-        scored: p2Sd
-      });
-      sdRound++;
-    }
+    const kicks = preGeneratedPenalties || buildPenaltyKicks();
 
     setPenaltyKicks(kicks);
     setPenScore1(0);

@@ -73,12 +73,31 @@ export default function App() {
   const [usedPlayerIds, setUsedPlayerIds] = useState(new Set());
   const usedPlayerIdsRef = useRef(new Set());
   const [timeLeft, setTimeLeft] = useState(10);
+  const [roundEndsAt, setRoundEndsAt] = useState(null);
+  const roundEndsAtRef = useRef(null);
+  const lastTickSecondRef = useRef(null);
   const [currentBid, setCurrentBid] = useState(5);
+  const topBidRef = useRef(5);
   const [highestBidder, setHighestBidder] = useState(null);
+  const leaderIdRef = useRef(null);
   const [bidHistory, setBidHistory] = useState([]);
   const [p1Passed, setP1Passed] = useState(false);
   const [p2Passed, setP2Passed] = useState(false);
   const [isAuctionActive, setIsAuctionActive] = useState(true);
+
+  const setAuctionDeadline = (endsAt) => {
+    roundEndsAtRef.current = endsAt;
+    setRoundEndsAt(endsAt);
+    lastTickSecondRef.current = null;
+    if (endsAt) {
+      setTimeLeft(Math.max(0, Math.ceil((endsAt - Date.now()) / 1000)));
+    } else {
+      setTimeLeft(10);
+    }
+  };
+
+  topBidRef.current = currentBid;
+  leaderIdRef.current = highestBidder?.id || null;
 
   // Round Result State
   const [roundWinnerInfo, setRoundWinnerInfo] = useState(null);
@@ -180,13 +199,91 @@ export default function App() {
     }
   }, []);
 
-  // Online message receiver dispatcher
+  // Online message receiver dispatcher (ref avoids stale closures in PeerJS callback)
+  const remoteHandlerRef = useRef(null);
+
+  const sendFullSyncState = () => {
+    onlineSync.send({
+      type: 'SYNC_STATE',
+      schedule,
+      currentRoundIdx,
+      currentTier1Player,
+      usedIds: Array.from(usedPlayerIdsRef.current),
+      player1,
+      player2,
+      gameState,
+      p1AuctionReady,
+      p2AuctionReady,
+      p1TacticsReady,
+      p2TacticsReady,
+      tacticsTimeLeft,
+      currentBid,
+      timeLeft,
+      roundEndsAt: roundEndsAtRef.current,
+      highestBidderId: highestBidder?.id || null,
+      bidHistory,
+      p1Passed,
+      p2Passed,
+      isAuctionActive
+    });
+  };
+
   const handleRemoteMessage = (msg) => {
     if (!msg || !msg.type) return;
 
-    if (msg.type === 'BID') {
+    if (msg.type === 'REQUEST_SYNC') {
+      if (onlineState.role === 'host') {
+        sendFullSyncState();
+      }
+    } else if (msg.type === 'SYNC_STATE') {
+      if (onlineState.role === 'guest') {
+        if (msg.schedule) setSchedule(msg.schedule);
+        if (typeof msg.currentRoundIdx === 'number') setCurrentRoundIdx(msg.currentRoundIdx);
+        if (msg.currentTier1Player) setCurrentTier1Player(msg.currentTier1Player);
+        if (Array.isArray(msg.usedIds)) {
+          usedPlayerIdsRef.current = new Set(msg.usedIds);
+          setUsedPlayerIds(new Set(msg.usedIds));
+        }
+        if (msg.player1) setPlayer1(msg.player1);
+        if (msg.player2) setPlayer2(msg.player2);
+        if (msg.gameState) setGameState(msg.gameState);
+        if (typeof msg.p1AuctionReady === 'boolean') setP1AuctionReady(msg.p1AuctionReady);
+        if (typeof msg.p2AuctionReady === 'boolean') setP2AuctionReady(msg.p2AuctionReady);
+        if (typeof msg.p1TacticsReady === 'boolean') setP1TacticsReady(msg.p1TacticsReady);
+        if (typeof msg.p2TacticsReady === 'boolean') setP2TacticsReady(msg.p2TacticsReady);
+        if (typeof msg.tacticsTimeLeft === 'number') setTacticsTimeLeft(msg.tacticsTimeLeft);
+        if (typeof msg.currentBid === 'number') {
+          topBidRef.current = msg.currentBid;
+          setCurrentBid(msg.currentBid);
+        }
+        if (msg.roundEndsAt) {
+          setAuctionDeadline(msg.roundEndsAt);
+        } else if (typeof msg.timeLeft === 'number') {
+          setTimeLeft(msg.timeLeft);
+        }
+        if (msg.highestBidderId) {
+          const hb = msg.highestBidderId === 'p1' ? (msg.player1 || player1) : (msg.player2 || player2);
+          leaderIdRef.current = hb.id;
+          setHighestBidder(hb);
+        } else {
+          leaderIdRef.current = null;
+          setHighestBidder(null);
+        }
+        if (Array.isArray(msg.bidHistory)) setBidHistory(msg.bidHistory);
+        if (typeof msg.p1Passed === 'boolean') setP1Passed(msg.p1Passed);
+        if (typeof msg.p2Passed === 'boolean') setP2Passed(msg.p2Passed);
+        if (typeof msg.isAuctionActive === 'boolean') setIsAuctionActive(msg.isAuctionActive);
+      }
+    } else if (msg.type === 'ROUND_START') {
+      if (msg.roundEndsAt) {
+        setAuctionDeadline(msg.roundEndsAt);
+      }
+      sounds.playWhistle();
+      setIsAuctionActive(true);
+      setGameState('auction');
+    } else if (msg.type === 'BID') {
       const manager = msg.playerRole === 'p1' ? player1 : player2;
-      handleLocalBid(manager, msg.amount, false);
+      handleLocalBid(manager, msg.amount, false, msg.roundEndsAt);
     } else if (msg.type === 'AUCTION_READY') {
       if (msg.playerRole === 'p1') setP1AuctionReady(Boolean(msg.ready));
       if (msg.playerRole === 'p2') setP2AuctionReady(Boolean(msg.ready));
@@ -196,46 +293,75 @@ export default function App() {
     } else if (msg.type === 'PASS') {
       if (msg.playerRole === 'p1') setP1Passed(true);
       if (msg.playerRole === 'p2') setP2Passed(true);
+    } else if (msg.type === 'ROUND_RESULT') {
+      const winMgr = msg.winnerId === 'p1' ? player1 : player2;
+      const loseMgr = msg.winnerId === 'p1' ? player2 : player1;
+      setIsAuctionActive(false);
+      sounds.playGavel();
+      if (msg.tier1?.id) markPlayerUsed(msg.tier1.id);
+      if (msg.tier2?.id) markPlayerUsed(msg.tier2.id);
+      setP1Candidates(msg.p1OpenSlots || []);
+      setP2Candidates(msg.p2OpenSlots || []);
+      setRoundWinnerInfo({ ...winMgr, amount: msg.finalWinningBid });
+      setRoundLoserInfo(loseMgr);
+      setRoundTier1(msg.tier1);
+      setRoundTier2(msg.tier2);
+      setGameState('round_result');
     } else if (msg.type === 'UPDATE_PROFILE') {
       if (msg.p1Name) setPlayer1(p => ({ ...p, name: msg.p1Name, avatar: msg.p1Avatar || p.avatar }));
       if (msg.p2Name) setPlayer2(p => ({ ...p, name: msg.p2Name, avatar: msg.p2Avatar || p.avatar }));
+    } else if (msg.type === 'CONFIRM_PLACEMENT_REQ') {
+      if (onlineState.role === 'host') {
+        handleConfirmPlacement(msg.data, true, true);
+      }
     } else if (msg.type === 'CONFIRM_PLACEMENT') {
-      handleConfirmPlacement(msg.data, false);
+      handleConfirmPlacement(msg.data, false, false);
+    } else if (msg.type === 'SWAP_SLOT') {
+      if (msg.playerRole === 'p1') handleP1Swap(msg.slotA, msg.slotB, false);
+      if (msg.playerRole === 'p2') handleP2Swap(msg.slotA, msg.slotB, false);
     } else if (msg.type.startsWith('MATCH_')) {
       setMatchRemoteMsg(msg);
     } else if (msg.type === 'RESTART') {
-      handleRestart(false);
+      handleRestart(false, msg.newSchedule, msg.firstT1);
     }
   };
 
+  remoteHandlerRef.current = handleRemoteMessage;
+
   // Online Room Handlers
   const handleHostOnlineRoom = (code) => {
+    const cleanCode = code.trim().toUpperCase();
+    setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: 'host', pendingRoomCode: cleanCode });
     onlineSync.createRoom(
-      code,
+      cleanCode,
       ({ role, roomCode }) => {
-        setOnlineState({ isConnected: true, role, roomCode });
+        setOnlineState({ isConnected: true, role, roomCode, pendingRole: null, pendingRoomCode: null });
         setIsP2Bot(false); // disable bot in online multiplayer
+        setTimeout(() => sendFullSyncState(), 250);
       },
-      handleRemoteMessage,
-      () => setOnlineState({ isConnected: false, role: null, roomCode: null })
+      (msg) => remoteHandlerRef.current?.(msg),
+      () => setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: null, pendingRoomCode: null })
     );
   };
 
   const handleJoinOnlineRoom = (code) => {
+    const cleanCode = code.trim().toUpperCase();
+    setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: 'guest', pendingRoomCode: cleanCode });
     onlineSync.joinRoom(
-      code,
+      cleanCode,
       ({ role, roomCode }) => {
-        setOnlineState({ isConnected: true, role, roomCode });
+        setOnlineState({ isConnected: true, role, roomCode, pendingRole: null, pendingRoomCode: null });
         setIsP2Bot(false);
+        setTimeout(() => onlineSync.send({ type: 'REQUEST_SYNC' }), 200);
       },
-      handleRemoteMessage,
-      () => setOnlineState({ isConnected: false, role: null, roomCode: null })
+      (msg) => remoteHandlerRef.current?.(msg),
+      () => setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: null, pendingRoomCode: null })
     );
   };
 
   const handleDisconnectOnline = () => {
     onlineSync.disconnect();
-    setOnlineState({ isConnected: false, role: null, roomCode: null });
+    setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: null, pendingRoomCode: null });
   };
 
   // Start Round 1 only when BOTH players are ready
@@ -246,12 +372,19 @@ export default function App() {
       return;
     }
     if (p1AuctionReady && p2AuctionReady) {
+      if (onlineState.isConnected && onlineState.role === 'guest') {
+        return; // Guest waits for Host's ROUND_START with authoritative roundEndsAt
+      }
+      const endsAt = Date.now() + 10000;
+      setAuctionDeadline(endsAt);
       sounds.playWhistle();
-      setTimeLeft(10);
       setIsAuctionActive(true);
       setGameState('auction');
+      if (onlineState.isConnected && onlineState.role === 'host') {
+        onlineSync.send({ type: 'ROUND_START', roundEndsAt: endsAt });
+      }
     }
-  }, [gameState, p1AuctionReady, p2AuctionReady, isP2Bot]);
+  }, [gameState, p1AuctionReady, p2AuctionReady, isP2Bot, onlineState.isConnected, onlineState.role]);
 
   const handleToggleAuctionReady = (role) => {
     if (role === 'p1') {
@@ -330,26 +463,27 @@ export default function App() {
     }
   };
 
-  // Countdown timer
+  // Timestamp-based countdown timer (prevents clock drift between 2 online devices)
   useEffect(() => {
-    if (gameState !== 'auction' || !isAuctionActive) return;
+    if (gameState !== 'auction' || !isAuctionActive || !roundEndsAt) return;
 
-    if (timeLeft <= 0) {
-      handleAuctionEnd();
-      return;
-    }
+    const updateRemaining = () => {
+      const remaining = Math.max(0, Math.ceil((roundEndsAt - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining <= 3 && remaining >= 1 && lastTickSecondRef.current !== remaining) {
+        lastTickSecondRef.current = remaining;
+        sounds.playTick();
+      }
+      if (remaining <= 0) {
+        handleAuctionEnd();
+      }
+    };
 
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 4 && prev > 1) {
-          sounds.playTick();
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    updateRemaining();
+    const timer = setInterval(updateRemaining, 200);
 
     return () => clearInterval(timer);
-  }, [timeLeft, gameState, isAuctionActive]);
+  }, [roundEndsAt, gameState, isAuctionActive]);
 
   // AI Bot logic for Player 2 (only in offline/local mode)
   useEffect(() => {
@@ -370,22 +504,29 @@ export default function App() {
     return () => clearTimeout(botTimer);
   }, [isP2Bot, onlineState.isConnected, currentBid, highestBidder, timeLeft, p2Passed, gameState, isAuctionActive]);
 
-  // Unified Bid Handler
-  const handleLocalBid = (manager, amount, broadcast = true) => {
+  // Unified Bid Handler with Race Condition Guard (newBid > topBid && now < roundEndsAt)
+  const handleLocalBid = (manager, amount, broadcast = true, incomingRoundEndsAt = null) => {
     if (!isAuctionActive) return;
+    const now = Date.now();
+    if (roundEndsAtRef.current && now >= roundEndsAtRef.current) return;
     if (manager.id === player1.id && p1Passed) return;
     if (manager.id === player2.id && p2Passed) return;
 
     const maxAllowed = manager.id === player1.id ? p1MaxBid : p2MaxBid;
-    const minValid = highestBidder ? currentBid + 1 : 1;
+    const minValid = leaderIdRef.current ? topBidRef.current + 1 : 1;
     if (amount < minValid || amount > maxAllowed) return;
 
+    topBidRef.current = amount;
+    leaderIdRef.current = manager.id;
     setCurrentBid(amount);
     setHighestBidder(manager);
     sounds.playBid();
 
-    // Anti-snipe: reset to 5s if < 5s
-    setTimeLeft(prev => prev < 5 ? 5 : prev);
+    // Anti-snipe: reset/extend countdown to at least 6s on every valid bid
+    const nextEndsAt = incomingRoundEndsAt
+      ? Math.max(roundEndsAtRef.current || 0, incomingRoundEndsAt)
+      : Math.max(roundEndsAtRef.current || 0, now + 6000);
+    setAuctionDeadline(nextEndsAt);
 
     setBidHistory(prev => [
       ...prev,
@@ -401,7 +542,8 @@ export default function App() {
       onlineSync.send({
         type: 'BID',
         playerRole: manager.id,
-        amount
+        amount,
+        roundEndsAt: nextEndsAt
       });
     }
   };
@@ -418,10 +560,15 @@ export default function App() {
     }
   };
 
-  // Auction Round Resolution
+  // Auction Round Resolution (Host-authoritative in online mode)
   const handleAuctionEnd = () => {
     setIsAuctionActive(false);
     sounds.playGavel();
+
+    if (onlineState.isConnected && onlineState.role === 'guest') {
+      // Guest waits for Host's authoritative ROUND_RESULT payload
+      return;
+    }
 
     let winner = highestBidder;
     let finalWinningBid = currentBid;
@@ -455,6 +602,18 @@ export default function App() {
     setRoundTier2(tier2);
 
     setGameState('round_result');
+
+    if (onlineState.isConnected && onlineState.role === 'host') {
+      onlineSync.send({
+        type: 'ROUND_RESULT',
+        winnerId: winner.id,
+        finalWinningBid,
+        tier1: currentTier1Player,
+        tier2,
+        p1OpenSlots,
+        p2OpenSlots
+      });
+    }
   };
 
   // Safe Slot Assignment with CAM/CDM mutual exclusion
@@ -465,8 +624,16 @@ export default function App() {
     return newSquad;
   };
 
-  // Confirm placement from MysteryBoxModal
-  const handleConfirmPlacement = ({ p1SlotId, p2SlotId }, broadcast = true) => {
+  // Confirm placement from MysteryBoxModal (Host-authoritative next player in online mode)
+  const handleConfirmPlacement = ({ p1SlotId, p2SlotId, nextT1: remoteNextT1 }, broadcast = true, forceExecute = false) => {
+    if (onlineState.isConnected && onlineState.role === 'guest' && broadcast && !forceExecute) {
+      onlineSync.send({
+        type: 'CONFIRM_PLACEMENT_REQ',
+        data: { p1SlotId, p2SlotId }
+      });
+      return;
+    }
+
     const isWinnerP1 = roundWinnerInfo.id === player1.id;
     const finalWinningBid = roundWinnerInfo.amount;
 
@@ -495,16 +662,15 @@ export default function App() {
       }));
     }
 
-    if (broadcast && onlineState.isConnected) {
-      onlineSync.send({
-        type: 'CONFIRM_PLACEMENT',
-        data: { p1SlotId, p2SlotId }
-      });
-    }
-
     // Go to 30s tactics rearrangement phase after all 11 players are drafted
     const nextIdx = currentRoundIdx + 1;
     if (nextIdx >= schedule.length) {
+      if (broadcast && onlineState.isConnected) {
+        onlineSync.send({
+          type: 'CONFIRM_PLACEMENT',
+          data: { p1SlotId, p2SlotId }
+        });
+      }
       setTacticsTimeLeft(30);
       setP1TacticsReady(false);
       setP2TacticsReady(isP2Bot);
@@ -513,14 +679,26 @@ export default function App() {
       return;
     }
 
-    setCurrentRoundIdx(nextIdx);
     const nextCat = schedule[nextIdx].category;
     const excluded = buildExcludedIds();
-    const nextT1 = selectPlayerForCategory(TIER_1_PLAYERS, nextCat, excluded);
+    const nextT1 = remoteNextT1 || selectPlayerForCategory(TIER_1_PLAYERS, nextCat, excluded);
     markPlayerUsed(nextT1?.id);
+
+    const nextEndsAt = data.roundEndsAt || (Date.now() + 10000);
+
+    if (broadcast && onlineState.isConnected) {
+      onlineSync.send({
+        type: 'CONFIRM_PLACEMENT',
+        data: { p1SlotId, p2SlotId, nextT1, roundEndsAt: nextEndsAt }
+      });
+    }
+
+    setCurrentRoundIdx(nextIdx);
     setCurrentTier1Player(nextT1);
+    topBidRef.current = 1;
+    leaderIdRef.current = null;
     setCurrentBid(1);
-    setTimeLeft(10);
+    setAuctionDeadline(nextEndsAt);
     setHighestBidder(null);
     setBidHistory([]);
     setP1Passed(false);
@@ -545,17 +723,23 @@ export default function App() {
     return newSquad;
   };
 
-  const handleP1Swap = (slotA, slotB) => {
+  const handleP1Swap = (slotA, slotB, broadcast = true) => {
     setPlayer1(prev => ({ ...prev, squad: handleSwap(prev.squad, slotA, slotB) }));
+    if (broadcast && onlineState.isConnected) {
+      onlineSync.send({ type: 'SWAP_SLOT', playerRole: 'p1', slotA, slotB });
+    }
   };
 
-  const handleP2Swap = (slotA, slotB) => {
+  const handleP2Swap = (slotA, slotB, broadcast = true) => {
     setPlayer2(prev => ({ ...prev, squad: handleSwap(prev.squad, slotA, slotB) }));
+    if (broadcast && onlineState.isConnected) {
+      onlineSync.send({ type: 'SWAP_SLOT', playerRole: 'p2', slotA, slotB });
+    }
   };
 
   // Restart Entire Game
-  const handleRestart = (broadcast = true) => {
-    const newSchedule = generateDraftSchedule();
+  const handleRestart = (broadcast = true, remoteSchedule = null, remoteFirstT1 = null) => {
+    const newSchedule = remoteSchedule || generateDraftSchedule();
     setSchedule(newSchedule);
     setPlayer1(p => ({ ...p, budget: 100, squad: {} }));
     setPlayer2(p => ({ ...p, budget: 100, squad: {} }));
@@ -563,11 +747,13 @@ export default function App() {
     setUsedPlayerIds(new Set());
     setCurrentRoundIdx(0);
     const firstCat = newSchedule[0].category;
-    const firstT1 = selectPlayerForCategory(TIER_1_PLAYERS, firstCat, usedPlayerIdsRef.current);
+    const firstT1 = remoteFirstT1 || selectPlayerForCategory(TIER_1_PLAYERS, firstCat, usedPlayerIdsRef.current);
     markPlayerUsed(firstT1?.id);
     setCurrentTier1Player(firstT1);
+    topBidRef.current = 1;
+    leaderIdRef.current = null;
     setCurrentBid(1);
-    setTimeLeft(10);
+    setAuctionDeadline(null);
     setHighestBidder(null);
     setBidHistory([]);
     setP1Passed(false);
@@ -581,7 +767,7 @@ export default function App() {
     setGameState('lobby');
 
     if (broadcast && onlineState.isConnected) {
-      onlineSync.send({ type: 'RESTART' });
+      onlineSync.send({ type: 'RESTART', newSchedule, firstT1 });
     }
   };
 
