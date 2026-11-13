@@ -146,3 +146,61 @@
 .timer-urgent {
   animation: urgentPulse 0.55s infinite ease-in-out;
 }
+
+/* Goal Celebration Golden Light Sweep */
+@keyframes goalGoldSweep {
+  0% {
+    transform: translateX(-140%) skewX(-22deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(260%) skewX(-22deg);
+    opacity: 0;
+  }
+}
+
+@keyframes goalGoldBorderPulse {
+  0%, 100% {
+    box-shadow: 0 0 18px rgba(251, 191, 36, 0.35), inset 0 0 22px rgba(251, 191, 36, 0.14);
+  }
+  50% {
+    box-shadow: 0 0 34px rgba(253, 224, 71, 0.65), inset 0 0 36px rgba(251, 191, 36, 0.28);
+  }
+}
+
+.goal-gold-frame {
+  animation: goalGoldBorderPulse 1.2s ease-in-out infinite;
+}
+
+.goal-gold-sweep {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 20;
+}
+
+.goal-gold-sweep::before {
+  content: '';
+  position: absolute;
+  top: -10%;
+  left: 0;
+  width: 52%;
+  height: 120%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(251, 191, 36, 0.18) 25%,
+    rgba(253, 224, 71, 0.52) 50%,
+    rgba(251, 191, 36, 0.18) 75%,
+    transparent 100%
+  );
+  filter: blur(2px);
+  animation: goalGoldSweep 1.35s ease-in-out infinite;
+}

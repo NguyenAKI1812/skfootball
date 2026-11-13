@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import PlayerCard from './PlayerCard';
 
 export default function AuctionArena1v1({
@@ -25,6 +25,9 @@ export default function AuctionArena1v1({
   isAuctionActive,
   isP1Disabled = false,
   isP2Disabled = false,
+  isP1Turn = true,
+  isP2Turn = true,
+  onStageBid = null,
   isLobby = false,
   p1Ready = false,
   p2Ready = false,
@@ -37,6 +40,22 @@ export default function AuctionArena1v1({
   onP1TacticsReady,
   onP2TacticsReady
 }) {
+  const [p1StagedBid, setP1StagedBid] = useState(null);
+  const [p2StagedBid, setP2StagedBid] = useState(null);
+
+  useEffect(() => {
+    setP1StagedBid(null);
+    setP2StagedBid(null);
+  }, [currentBid, currentRound, isP1Turn, isP2Turn]);
+
+  const stageIncrement = (currentStaged, step, maxAllowed) => {
+    const base = currentStaged ?? currentBid;
+    const next = Math.min(maxAllowed, base + step);
+    if (next > base) {
+      onStageBid?.();
+    }
+    return next;
+  };
   const isUrgent = timeLeft <= 4 && timeLeft > 0;
   const isP1Highest = highestBidder?.id === player1.id;
   const isP2Highest = highestBidder?.id === player2.id;
@@ -66,7 +85,7 @@ export default function AuctionArena1v1({
             PRE-MATCH · READY CHECK
           </span>
           <span className="font-mono-num text-xs font-bold text-slate-400">
-            {totalRounds} VÒNG · 100M €
+            {totalRounds} VÒNG · 1000M €
           </span>
         </div>
 
@@ -348,7 +367,7 @@ export default function AuctionArena1v1({
               {currentBid} <span className="font-display text-xl font-bold text-amber-300/90">M €</span>
             </div>
 
-            <div className="flex items-center justify-center gap-2 text-xs mt-1">
+            <div className="flex items-center justify-center gap-2 text-xs mt-1 flex-wrap">
               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">LEADER:</span>
               <span
                 className={`font-display text-xs font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-sm ${
@@ -360,6 +379,16 @@ export default function AuctionArena1v1({
                 }`}
               >
                 {highestBidder?.name || 'NO BIDS'}
+              </span>
+              <span className="text-slate-600">·</span>
+              <span
+                className={`font-display text-[11px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-sm border ${
+                  isP1Turn
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/60'
+                    : 'bg-rose-500/20 text-rose-300 border-rose-400/60'
+                }`}
+              >
+                LƯỢT: {isP1Turn ? player1.name : player2.name}
               </span>
             </div>
           </div>
@@ -446,11 +475,22 @@ export default function AuctionArena1v1({
                 MAX <strong className="text-amber-400">{p1MaxBid}M</strong>
               </span>
             </div>
-            {isP1Highest && (
-              <span className="text-[9px] font-extrabold bg-emerald-500 text-slate-950 px-2 py-0.5 rounded-sm uppercase tracking-wider">
-                LEADING
-              </span>
-            )}
+            <div className="flex items-center gap-1.5">
+              {isP1Turn ? (
+                <span className="text-[9px] font-extrabold bg-amber-400 text-slate-950 px-2 py-0.5 rounded-sm uppercase tracking-wider animate-pulse">
+                  ĐẾN LƯỢT
+                </span>
+              ) : (
+                <span className="text-[9px] font-bold bg-slate-800 text-slate-400 px-2 py-0.5 rounded-sm uppercase tracking-wider">
+                  CHỜ LƯỢT
+                </span>
+              )}
+              {isP1Highest && (
+                <span className="text-[9px] font-extrabold bg-emerald-500 text-slate-950 px-2 py-0.5 rounded-sm uppercase tracking-wider">
+                  LEADING
+                </span>
+              )}
+            </div>
           </div>
 
           {p1Passed ? (
@@ -458,25 +498,78 @@ export default function AuctionArena1v1({
               PASSED · RECEIVES ROLE PLAYER
             </div>
           ) : (
-            <div className="grid grid-cols-5 gap-1.5">
-              <BidBtn label="+1M" amount={currentBid + 1} onClick={() => onP1Bid(currentBid + 1)} disabled={!isAuctionActive || currentBid + 1 > p1MaxBid || isP1Highest || isP1Disabled} variant="green" />
-              <BidBtn label="+2M" amount={currentBid + 2} onClick={() => onP1Bid(currentBid + 2)} disabled={!isAuctionActive || currentBid + 2 > p1MaxBid || isP1Highest || isP1Disabled} variant="green" />
-              <BidBtn label="+5M" amount={currentBid + 5} onClick={() => onP1Bid(currentBid + 5)} disabled={!isAuctionActive || currentBid + 5 > p1MaxBid || isP1Highest || isP1Disabled} variant="green" />
-              <button
-                onClick={() => onP1Bid(p1MaxBid)}
-                disabled={!isAuctionActive || currentBid >= p1MaxBid || isP1Highest || isP1Disabled}
-                className="btn-bid-max py-1.5 px-1 rounded font-display font-extrabold text-xs disabled:opacity-30 disabled:pointer-events-none transition-all flex flex-col items-center justify-center cursor-pointer"
-              >
-                <span className="text-sm leading-none tracking-wider">MAX</span>
-                <span className="font-mono-num text-[9px] font-bold opacity-85 leading-none mt-0.5">{p1MaxBid}M</span>
-              </button>
-              <button
-                onClick={onP1Pass}
-                disabled={!isAuctionActive || isP1Highest || isP1Disabled}
-                className="py-1.5 px-1 rounded font-display text-sm font-bold tracking-wider bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 border-b-2 border-b-slate-950 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center cursor-pointer active:translate-y-px"
-              >
-                PASS
-              </button>
+            <div className="space-y-1.5">
+              <div className="grid grid-cols-5 gap-1.5">
+                <BidBtn
+                  label="+10M"
+                  onClick={() => setP1StagedBid(prev => stageIncrement(prev, 10, p1MaxBid))}
+                  disabled={!isAuctionActive || !isP1Turn || (p1StagedBid ?? currentBid) >= p1MaxBid || isP1Disabled}
+                  variant="green"
+                />
+                <BidBtn
+                  label="+25M"
+                  onClick={() => setP1StagedBid(prev => stageIncrement(prev, 25, p1MaxBid))}
+                  disabled={!isAuctionActive || !isP1Turn || (p1StagedBid ?? currentBid) >= p1MaxBid || isP1Disabled}
+                  variant="green"
+                />
+                <BidBtn
+                  label="+50M"
+                  onClick={() => setP1StagedBid(prev => stageIncrement(prev, 50, p1MaxBid))}
+                  disabled={!isAuctionActive || !isP1Turn || (p1StagedBid ?? currentBid) >= p1MaxBid || isP1Disabled}
+                  variant="green"
+                />
+                <button
+                  onClick={() => {
+                    setP1StagedBid(p1MaxBid);
+                    onStageBid?.();
+                  }}
+                  disabled={!isAuctionActive || !isP1Turn || currentBid >= p1MaxBid || isP1Disabled}
+                  className="btn-bid-max py-1.5 px-1 rounded font-display font-extrabold text-xs disabled:opacity-30 disabled:pointer-events-none transition-all flex flex-col items-center justify-center cursor-pointer"
+                >
+                  <span className="text-sm leading-none tracking-wider">MAX</span>
+                  <span className="font-mono-num text-[9px] font-bold opacity-85 leading-none mt-0.5">{p1MaxBid}M</span>
+                </button>
+                <button
+                  onClick={onP1Pass}
+                  disabled={!isAuctionActive || !isP1Turn || isP1Disabled}
+                  className="py-1.5 px-1 rounded font-display text-sm font-bold tracking-wider bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 border-b-2 border-b-slate-950 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center cursor-pointer active:translate-y-px"
+                >
+                  PASS
+                </button>
+              </div>
+              <div className="flex items-center gap-1.5 bg-slate-900/90 border border-emerald-500/35 rounded px-2.5 py-1.5">
+                <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
+                    {p1StagedBid !== null ? 'Mức giá chọn:' : 'Bấm +10 / +25 / +50'}
+                  </span>
+                  <span className="font-mono-num text-sm font-extrabold text-emerald-300">
+                    {p1StagedBid !== null ? `${p1StagedBid}M €` : `${currentBid}M €`}
+                  </span>
+                </div>
+                {p1StagedBid !== null && (
+                  <button
+                    type="button"
+                    onClick={() => setP1StagedBid(null)}
+                    className="px-2 py-1 rounded text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                    title="Chọn lại"
+                  >
+                    ↺
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (p1StagedBid !== null && p1StagedBid > (highestBidder ? currentBid : 0)) {
+                      onP1Bid(p1StagedBid);
+                      setP1StagedBid(null);
+                    }
+                  }}
+                  disabled={!isAuctionActive || !isP1Turn || isP1Disabled || p1StagedBid === null || p1StagedBid <= (highestBidder ? currentBid : 0) || p1StagedBid > p1MaxBid}
+                  className="px-3 py-1 rounded font-display text-xs font-extrabold uppercase tracking-wider bg-emerald-500 hover:bg-emerald-400 text-slate-950 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer shrink-0"
+                >
+                  {p1StagedBid !== null ? `XÁC NHẬN ${p1StagedBid}M` : 'XÁC NHẬN'}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -511,11 +604,22 @@ export default function AuctionArena1v1({
                 MAX <strong className="text-amber-400">{p2MaxBid}M</strong>
               </span>
             </div>
-            {isP2Highest && (
-              <span className="text-[9px] font-extrabold bg-rose-600 text-white px-2 py-0.5 rounded-sm uppercase tracking-wider">
-                LEADING
-              </span>
-            )}
+            <div className="flex items-center gap-1.5">
+              {isP2Turn ? (
+                <span className="text-[9px] font-extrabold bg-amber-400 text-slate-950 px-2 py-0.5 rounded-sm uppercase tracking-wider animate-pulse">
+                  ĐẾN LƯỢT
+                </span>
+              ) : (
+                <span className="text-[9px] font-bold bg-slate-800 text-slate-400 px-2 py-0.5 rounded-sm uppercase tracking-wider">
+                  CHỜ LƯỢT
+                </span>
+              )}
+              {isP2Highest && (
+                <span className="text-[9px] font-extrabold bg-rose-600 text-white px-2 py-0.5 rounded-sm uppercase tracking-wider">
+                  LEADING
+                </span>
+              )}
+            </div>
           </div>
 
           {p2Passed ? (
@@ -527,25 +631,78 @@ export default function AuctionArena1v1({
               AI BOT THINKING...
             </div>
           ) : (
-            <div className="grid grid-cols-5 gap-1.5">
-              <BidBtn label="+1M" amount={currentBid + 1} onClick={() => onP2Bid(currentBid + 1)} disabled={!isAuctionActive || currentBid + 1 > p2MaxBid || isP2Highest || isP2Disabled} variant="red" />
-              <BidBtn label="+2M" amount={currentBid + 2} onClick={() => onP2Bid(currentBid + 2)} disabled={!isAuctionActive || currentBid + 2 > p2MaxBid || isP2Highest || isP2Disabled} variant="red" />
-              <BidBtn label="+5M" amount={currentBid + 5} onClick={() => onP2Bid(currentBid + 5)} disabled={!isAuctionActive || currentBid + 5 > p2MaxBid || isP2Highest || isP2Disabled} variant="red" />
-              <button
-                onClick={() => onP2Bid(p2MaxBid)}
-                disabled={!isAuctionActive || currentBid >= p2MaxBid || isP2Highest || isP2Disabled}
-                className="btn-bid-max py-1.5 px-1 rounded font-display font-extrabold text-xs disabled:opacity-30 disabled:pointer-events-none transition-all flex flex-col items-center justify-center cursor-pointer"
-              >
-                <span className="text-sm leading-none tracking-wider">MAX</span>
-                <span className="font-mono-num text-[9px] font-bold opacity-85 leading-none mt-0.5">{p2MaxBid}M</span>
-              </button>
-              <button
-                onClick={onP2Pass}
-                disabled={!isAuctionActive || isP2Highest || isP2Disabled}
-                className="py-1.5 px-1 rounded font-display text-sm font-bold tracking-wider bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 border-b-2 border-b-slate-950 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center cursor-pointer active:translate-y-px"
-              >
-                PASS
-              </button>
+            <div className="space-y-1.5">
+              <div className="grid grid-cols-5 gap-1.5">
+                <BidBtn
+                  label="+10M"
+                  onClick={() => setP2StagedBid(prev => stageIncrement(prev, 10, p2MaxBid))}
+                  disabled={!isAuctionActive || !isP2Turn || (p2StagedBid ?? currentBid) >= p2MaxBid || isP2Disabled}
+                  variant="red"
+                />
+                <BidBtn
+                  label="+25M"
+                  onClick={() => setP2StagedBid(prev => stageIncrement(prev, 25, p2MaxBid))}
+                  disabled={!isAuctionActive || !isP2Turn || (p2StagedBid ?? currentBid) >= p2MaxBid || isP2Disabled}
+                  variant="red"
+                />
+                <BidBtn
+                  label="+50M"
+                  onClick={() => setP2StagedBid(prev => stageIncrement(prev, 50, p2MaxBid))}
+                  disabled={!isAuctionActive || !isP2Turn || (p2StagedBid ?? currentBid) >= p2MaxBid || isP2Disabled}
+                  variant="red"
+                />
+                <button
+                  onClick={() => {
+                    setP2StagedBid(p2MaxBid);
+                    onStageBid?.();
+                  }}
+                  disabled={!isAuctionActive || !isP2Turn || currentBid >= p2MaxBid || isP2Disabled}
+                  className="btn-bid-max py-1.5 px-1 rounded font-display font-extrabold text-xs disabled:opacity-30 disabled:pointer-events-none transition-all flex flex-col items-center justify-center cursor-pointer"
+                >
+                  <span className="text-sm leading-none tracking-wider">MAX</span>
+                  <span className="font-mono-num text-[9px] font-bold opacity-85 leading-none mt-0.5">{p2MaxBid}M</span>
+                </button>
+                <button
+                  onClick={onP2Pass}
+                  disabled={!isAuctionActive || !isP2Turn || isP2Disabled}
+                  className="py-1.5 px-1 rounded font-display text-sm font-bold tracking-wider bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 border-b-2 border-b-slate-950 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center cursor-pointer active:translate-y-px"
+                >
+                  PASS
+                </button>
+              </div>
+              <div className="flex items-center gap-1.5 bg-slate-900/90 border border-rose-500/45 rounded px-2.5 py-1.5">
+                <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
+                    {p2StagedBid !== null ? 'Mức giá chọn:' : 'Bấm +10 / +25 / +50'}
+                  </span>
+                  <span className="font-mono-num text-sm font-extrabold text-rose-300">
+                    {p2StagedBid !== null ? `${p2StagedBid}M €` : `${currentBid}M €`}
+                  </span>
+                </div>
+                {p2StagedBid !== null && (
+                  <button
+                    type="button"
+                    onClick={() => setP2StagedBid(null)}
+                    className="px-2 py-1 rounded text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                    title="Chọn lại"
+                  >
+                    ↺
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (p2StagedBid !== null && p2StagedBid > (highestBidder ? currentBid : 0)) {
+                      onP2Bid(p2StagedBid);
+                      setP2StagedBid(null);
+                    }
+                  }}
+                  disabled={!isAuctionActive || !isP2Turn || isP2Disabled || p2StagedBid === null || p2StagedBid <= (highestBidder ? currentBid : 0) || p2StagedBid > p2MaxBid}
+                  className="px-3 py-1 rounded font-display text-xs font-extrabold uppercase tracking-wider bg-rose-600 hover:bg-rose-500 text-white disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer shrink-0"
+                >
+                  {p2StagedBid !== null ? `XÁC NHẬN ${p2StagedBid}M` : 'XÁC NHẬN'}
+                </button>
+              </div>
             </div>
           )}
         </div>

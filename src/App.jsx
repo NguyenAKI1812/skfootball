@@ -11,7 +11,9 @@ import MysteryBoxModal from './components/MysteryBoxModal';
 import HeadToHeadMatch from './components/HeadToHeadMatch';
 import ProfileModal from './components/ProfileModal';
 import OnlineRoomModal from './components/OnlineRoomModal';
+import GuideModal from './components/GuideModal';
 import { onlineSync } from './utils/onlineSync';
+import { getSavedAccount } from './utils/accountService';
 import { sounds } from './utils/sound';
 import { 
   Trophy, 
@@ -20,7 +22,8 @@ import {
   RotateCcw,
   Globe,
   Edit3,
-  Wifi
+  Wifi,
+  HelpCircle
 } from 'lucide-react';
 
 export default function App() {
@@ -35,6 +38,7 @@ export default function App() {
   // Modals
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showOnlineModal, setShowOnlineModal] = useState(false);
+  const [showGuideModal, setShowGuideModal] = useState(false);
 
   // Online Multiplayer State
   const [onlineState, setOnlineState] = useState({
@@ -42,6 +46,7 @@ export default function App() {
     role: null, // 'host' or 'guest'
     roomCode: null
   });
+  const [onlineAccount, setOnlineAccount] = useState(() => getSavedAccount());
 
   // 11-Round Fixed Schedule: 1 GK, 4 DF, 3 MF, 3 FW
   const [schedule, setSchedule] = useState(() => generateDraftSchedule());
@@ -52,7 +57,7 @@ export default function App() {
     id: 'p1',
     name: 'HLV 1 (Bạn)',
     avatar: '🟢',
-    budget: 100,
+    budget: 1000,
     color: '#10b981',
     squad: {}
   });
@@ -61,7 +66,7 @@ export default function App() {
     id: 'p2',
     name: 'HLV 2 (Đối thủ)',
     avatar: '🔴',
-    budget: 100,
+    budget: 1000,
     color: '#ef4444',
     squad: {}
   });
@@ -75,14 +80,17 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState(10);
   const [roundEndsAt, setRoundEndsAt] = useState(null);
   const roundEndsAtRef = useRef(null);
+  const timerPausedUntilRef = useRef(0);
   const lastTickSecondRef = useRef(null);
-  const [currentBid, setCurrentBid] = useState(5);
-  const topBidRef = useRef(5);
+  const [currentBid, setCurrentBid] = useState(0);
+  const topBidRef = useRef(0);
   const [highestBidder, setHighestBidder] = useState(null);
   const leaderIdRef = useRef(null);
   const [bidHistory, setBidHistory] = useState([]);
   const [p1Passed, setP1Passed] = useState(false);
   const [p2Passed, setP2Passed] = useState(false);
+  const [currentTurn, setCurrentTurn] = useState('p1');
+  const currentTurnRef = useRef('p1');
   const [isAuctionActive, setIsAuctionActive] = useState(true);
 
   const setAuctionDeadline = (endsAt) => {
@@ -92,12 +100,13 @@ export default function App() {
     if (endsAt) {
       setTimeLeft(Math.max(0, Math.ceil((endsAt - Date.now()) / 1000)));
     } else {
-      setTimeLeft(10);
+      setTimeLeft(12);
     }
   };
 
   topBidRef.current = currentBid;
   leaderIdRef.current = highestBidder?.id || null;
+  currentTurnRef.current = currentTurn;
 
   // Round Result State
   const [roundWinnerInfo, setRoundWinnerInfo] = useState(null);
@@ -169,8 +178,8 @@ export default function App() {
     const p = selectPlayerForCategory(TIER_1_PLAYERS, cat, excluded);
     markPlayerUsed(p?.id);
     setCurrentTier1Player(p);
-    setCurrentBid(1);
-    setTimeLeft(10);
+    setCurrentBid(0);
+    setTimeLeft(12);
     setHighestBidder(null);
     setBidHistory([]);
     setP1Passed(false);
@@ -182,7 +191,11 @@ export default function App() {
       const params = new URLSearchParams(window.location.search);
       const roomParam = params.get('room');
       if (roomParam) {
-        handleJoinOnlineRoom(roomParam);
+        if (getSavedAccount()) {
+          handleJoinOnlineRoom(roomParam);
+        } else {
+          setShowOnlineModal(true);
+        }
       }
       if (params.get('test') === 'match') {
         const p1Sq = {};
@@ -224,6 +237,7 @@ export default function App() {
       bidHistory,
       p1Passed,
       p2Passed,
+      currentTurn: currentTurnRef.current,
       isAuctionActive
     });
   };
@@ -272,15 +286,29 @@ export default function App() {
         if (Array.isArray(msg.bidHistory)) setBidHistory(msg.bidHistory);
         if (typeof msg.p1Passed === 'boolean') setP1Passed(msg.p1Passed);
         if (typeof msg.p2Passed === 'boolean') setP2Passed(msg.p2Passed);
+        if (msg.currentTurn) {
+          currentTurnRef.current = msg.currentTurn;
+          setCurrentTurn(msg.currentTurn);
+        }
         if (typeof msg.isAuctionActive === 'boolean') setIsAuctionActive(msg.isAuctionActive);
       }
     } else if (msg.type === 'ROUND_START') {
+      if (msg.currentTurn) {
+        currentTurnRef.current = msg.currentTurn;
+        setCurrentTurn(msg.currentTurn);
+      }
       if (msg.roundEndsAt) {
         setAuctionDeadline(msg.roundEndsAt);
       }
       sounds.playWhistle();
       setIsAuctionActive(true);
       setGameState('auction');
+    } else if (msg.type === 'EXTEND_TIMER') {
+      if (msg.roundEndsAt) {
+        timerPausedUntilRef.current = Date.now() + 1000;
+        roundEndsAtRef.current = msg.roundEndsAt;
+        setRoundEndsAt(msg.roundEndsAt);
+      }
     } else if (msg.type === 'BID') {
       const manager = msg.playerRole === 'p1' ? player1 : player2;
       handleLocalBid(manager, msg.amount, false, msg.roundEndsAt);
@@ -293,6 +321,9 @@ export default function App() {
     } else if (msg.type === 'PASS') {
       if (msg.playerRole === 'p1') setP1Passed(true);
       if (msg.playerRole === 'p2') setP2Passed(true);
+      if (!onlineState.isConnected || onlineState.role === 'host') {
+        handleAuctionEnd(msg.playerRole);
+      }
     } else if (msg.type === 'ROUND_RESULT') {
       const winMgr = msg.winnerId === 'p1' ? player1 : player2;
       const loseMgr = msg.winnerId === 'p1' ? player2 : player1;
@@ -328,9 +359,27 @@ export default function App() {
 
   remoteHandlerRef.current = handleRemoteMessage;
 
+  const handleOnlineAccountChange = (acc) => {
+    setOnlineAccount(acc);
+    if (!acc?.displayName) return;
+
+    if (onlineState.isConnected && onlineState.role === 'guest') {
+      setPlayer2(p => ({ ...p, name: acc.displayName }));
+      onlineSync.send({ type: 'UPDATE_PROFILE', p2Name: acc.displayName });
+    } else {
+      setPlayer1(p => ({ ...p, name: acc.displayName }));
+      if (onlineState.isConnected && onlineState.role === 'host') {
+        onlineSync.send({ type: 'UPDATE_PROFILE', p1Name: acc.displayName });
+      }
+    }
+  };
+
   // Online Room Handlers
   const handleHostOnlineRoom = (code) => {
     const cleanCode = code.trim().toUpperCase();
+    if (onlineAccount?.displayName) {
+      setPlayer1(p => ({ ...p, name: onlineAccount.displayName }));
+    }
     setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: 'host', pendingRoomCode: cleanCode });
     onlineSync.createRoom(
       cleanCode,
@@ -346,13 +395,21 @@ export default function App() {
 
   const handleJoinOnlineRoom = (code) => {
     const cleanCode = code.trim().toUpperCase();
+    if (onlineAccount?.displayName) {
+      setPlayer2(p => ({ ...p, name: onlineAccount.displayName }));
+    }
     setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: 'guest', pendingRoomCode: cleanCode });
     onlineSync.joinRoom(
       cleanCode,
       ({ role, roomCode }) => {
         setOnlineState({ isConnected: true, role, roomCode, pendingRole: null, pendingRoomCode: null });
         setIsP2Bot(false);
-        setTimeout(() => onlineSync.send({ type: 'REQUEST_SYNC' }), 200);
+        setTimeout(() => {
+          onlineSync.send({ type: 'REQUEST_SYNC' });
+          if (onlineAccount?.displayName) {
+            onlineSync.send({ type: 'UPDATE_PROFILE', p2Name: onlineAccount.displayName });
+          }
+        }, 200);
       },
       (msg) => remoteHandlerRef.current?.(msg),
       () => setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: null, pendingRoomCode: null })
@@ -375,13 +432,15 @@ export default function App() {
       if (onlineState.isConnected && onlineState.role === 'guest') {
         return; // Guest waits for Host's ROUND_START with authoritative roundEndsAt
       }
-      const endsAt = Date.now() + 10000;
+      const endsAt = Date.now() + 12000;
+      currentTurnRef.current = 'p1';
+      setCurrentTurn('p1');
       setAuctionDeadline(endsAt);
       sounds.playWhistle();
       setIsAuctionActive(true);
       setGameState('auction');
       if (onlineState.isConnected && onlineState.role === 'host') {
-        onlineSync.send({ type: 'ROUND_START', roundEndsAt: endsAt });
+        onlineSync.send({ type: 'ROUND_START', roundEndsAt: endsAt, currentTurn: 'p1' });
       }
     }
   }, [gameState, p1AuctionReady, p2AuctionReady, isP2Bot, onlineState.isConnected, onlineState.role]);
@@ -468,14 +527,16 @@ export default function App() {
     if (gameState !== 'auction' || !isAuctionActive || !roundEndsAt) return;
 
     const updateRemaining = () => {
-      const remaining = Math.max(0, Math.ceil((roundEndsAt - Date.now()) / 1000));
+      const now = Date.now();
+      if (now < timerPausedUntilRef.current) return;
+      const remaining = Math.max(0, Math.ceil((roundEndsAt - now) / 1000));
       setTimeLeft(remaining);
       if (remaining <= 3 && remaining >= 1 && lastTickSecondRef.current !== remaining) {
         lastTickSecondRef.current = remaining;
         sounds.playTick();
       }
       if (remaining <= 0) {
-        handleAuctionEnd();
+        handleAuctionEnd(currentTurnRef.current);
       }
     };
 
@@ -485,28 +546,47 @@ export default function App() {
     return () => clearInterval(timer);
   }, [roundEndsAt, gameState, isAuctionActive]);
 
-  // AI Bot logic for Player 2 (only in offline/local mode)
+  // AI Bot logic for Player 2 (only in offline/local mode, and only on P2's turn)
   useEffect(() => {
-    if (onlineState.isConnected || !isP2Bot || gameState !== 'auction' || !isAuctionActive || p2Passed || timeLeft <= 0) return;
+    if (onlineState.isConnected || !isP2Bot || gameState !== 'auction' || !isAuctionActive || p2Passed || currentTurn !== 'p2' || timeLeft <= 0) return;
     if (highestBidder?.id === player2.id) return;
 
     const botTimer = setTimeout(() => {
-      const increment = Math.floor(Math.random() * 3) + 1;
-      const desiredBid = currentBid + increment;
+      const steps = [10, 25, 50];
+      const increment = steps[Math.floor(Math.random() * steps.length)];
+      const desiredBid = (highestBidder ? currentBid : 0) + increment;
 
-      if (desiredBid <= p2MaxBid && Math.random() < 0.75) {
+      if (desiredBid <= p2MaxBid && Math.random() < 0.78) {
         handleLocalBid(player2, desiredBid, true);
-      } else if (currentBid > p2MaxBid * 0.8 && Math.random() < 0.5) {
-        setP2Passed(true);
+      } else if (currentBid + 10 <= p2MaxBid && Math.random() < 0.5) {
+        handleLocalBid(player2, currentBid + 10, true);
+      } else {
+        handlePass('p2');
       }
-    }, Math.random() * 1500 + 1000);
+    }, Math.random() * 1200 + 800);
 
     return () => clearTimeout(botTimer);
-  }, [isP2Bot, onlineState.isConnected, currentBid, highestBidder, timeLeft, p2Passed, gameState, isAuctionActive]);
+  }, [isP2Bot, onlineState.isConnected, currentBid, highestBidder, timeLeft, p2Passed, currentTurn, gameState, isAuctionActive]);
 
-  // Unified Bid Handler with Race Condition Guard (newBid > topBid && now < roundEndsAt)
+  const handleExtendTurnTimer = () => {
+    if (gameState !== 'auction' || !isAuctionActive || !roundEndsAtRef.current) return;
+    const now = Date.now();
+    const newPauseEnd = now + 1000;
+    const effectivePrev = Math.max(now, timerPausedUntilRef.current);
+    const addedMs = Math.max(0, newPauseEnd - effectivePrev);
+    timerPausedUntilRef.current = newPauseEnd;
+    const nextEndsAt = roundEndsAtRef.current + addedMs;
+    roundEndsAtRef.current = nextEndsAt;
+    setRoundEndsAt(nextEndsAt);
+    if (onlineState.isConnected) {
+      onlineSync.send({ type: 'EXTEND_TIMER', roundEndsAt: nextEndsAt });
+    }
+  };
+
+  // Unified Turn-Based Bid Handler with Race Condition Guard
   const handleLocalBid = (manager, amount, broadcast = true, incomingRoundEndsAt = null) => {
     if (!isAuctionActive) return;
+    if (currentTurnRef.current && manager.id !== currentTurnRef.current) return;
     const now = Date.now();
     if (roundEndsAtRef.current && now >= roundEndsAtRef.current) return;
     if (manager.id === player1.id && p1Passed) return;
@@ -522,10 +602,12 @@ export default function App() {
     setHighestBidder(manager);
     sounds.playBid();
 
-    // Anti-snipe: reset/extend countdown to at least 6s on every valid bid
-    const nextEndsAt = incomingRoundEndsAt
-      ? Math.max(roundEndsAtRef.current || 0, incomingRoundEndsAt)
-      : Math.max(roundEndsAtRef.current || 0, now + 6000);
+    // Switch turn to the other player and reset turn timer to 12s
+    const nextTurn = manager.id === 'p1' ? 'p2' : 'p1';
+    currentTurnRef.current = nextTurn;
+    setCurrentTurn(nextTurn);
+
+    const nextEndsAt = incomingRoundEndsAt || (now + 12000);
     setAuctionDeadline(nextEndsAt);
 
     setBidHistory(prev => [
@@ -549,6 +631,8 @@ export default function App() {
   };
 
   const handlePass = (managerId) => {
+    if (!isAuctionActive) return;
+    if (currentTurnRef.current && managerId !== currentTurnRef.current) return;
     if (managerId === 'p1') setP1Passed(true);
     if (managerId === 'p2') setP2Passed(true);
 
@@ -558,10 +642,14 @@ export default function App() {
         playerRole: managerId
       });
     }
+
+    if (!onlineState.isConnected || onlineState.role === 'host') {
+      handleAuctionEnd(managerId);
+    }
   };
 
   // Auction Round Resolution (Host-authoritative in online mode)
-  const handleAuctionEnd = () => {
+  const handleAuctionEnd = (passedBy = null) => {
     setIsAuctionActive(false);
     sounds.playGavel();
 
@@ -574,7 +662,13 @@ export default function App() {
     let finalWinningBid = currentBid;
 
     if (!winner) {
-      winner = Math.random() > 0.5 ? player1 : player2;
+      if (passedBy === 'p1') {
+        winner = player2;
+      } else if (passedBy === 'p2') {
+        winner = player1;
+      } else {
+        winner = Math.random() > 0.5 ? player1 : player2;
+      }
       finalWinningBid = 1;
     }
 
@@ -625,7 +719,8 @@ export default function App() {
   };
 
   // Confirm placement from MysteryBoxModal (Host-authoritative next player in online mode)
-  const handleConfirmPlacement = ({ p1SlotId, p2SlotId, nextT1: remoteNextT1 }, broadcast = true, forceExecute = false) => {
+  const handleConfirmPlacement = ({ p1SlotId, p2SlotId, nextT1: remoteNextT1, roundEndsAt: remoteRoundEndsAt }, broadcast = true, forceExecute = false) => {
+    if (gameState !== 'round_result') return;
     if (onlineState.isConnected && onlineState.role === 'guest' && broadcast && !forceExecute) {
       onlineSync.send({
         type: 'CONFIRM_PLACEMENT_REQ',
@@ -684,7 +779,8 @@ export default function App() {
     const nextT1 = remoteNextT1 || selectPlayerForCategory(TIER_1_PLAYERS, nextCat, excluded);
     markPlayerUsed(nextT1?.id);
 
-    const nextEndsAt = data.roundEndsAt || (Date.now() + 10000);
+    const nextEndsAt = remoteRoundEndsAt || (Date.now() + 12000);
+    const nextStarter = nextIdx % 2 === 0 ? 'p1' : 'p2';
 
     if (broadcast && onlineState.isConnected) {
       onlineSync.send({
@@ -695,9 +791,11 @@ export default function App() {
 
     setCurrentRoundIdx(nextIdx);
     setCurrentTier1Player(nextT1);
-    topBidRef.current = 1;
+    topBidRef.current = 0;
     leaderIdRef.current = null;
-    setCurrentBid(1);
+    setCurrentBid(0);
+    currentTurnRef.current = nextStarter;
+    setCurrentTurn(nextStarter);
     setAuctionDeadline(nextEndsAt);
     setHighestBidder(null);
     setBidHistory([]);
@@ -741,8 +839,8 @@ export default function App() {
   const handleRestart = (broadcast = true, remoteSchedule = null, remoteFirstT1 = null) => {
     const newSchedule = remoteSchedule || generateDraftSchedule();
     setSchedule(newSchedule);
-    setPlayer1(p => ({ ...p, budget: 100, squad: {} }));
-    setPlayer2(p => ({ ...p, budget: 100, squad: {} }));
+    setPlayer1(p => ({ ...p, budget: 1000, squad: {} }));
+    setPlayer2(p => ({ ...p, budget: 1000, squad: {} }));
     usedPlayerIdsRef.current = new Set();
     setUsedPlayerIds(new Set());
     setCurrentRoundIdx(0);
@@ -750,9 +848,11 @@ export default function App() {
     const firstT1 = remoteFirstT1 || selectPlayerForCategory(TIER_1_PLAYERS, firstCat, usedPlayerIdsRef.current);
     markPlayerUsed(firstT1?.id);
     setCurrentTier1Player(firstT1);
-    topBidRef.current = 1;
+    topBidRef.current = 0;
     leaderIdRef.current = null;
-    setCurrentBid(1);
+    setCurrentBid(0);
+    currentTurnRef.current = 'p1';
+    setCurrentTurn('p1');
     setAuctionDeadline(null);
     setHighestBidder(null);
     setBidHistory([]);
@@ -776,21 +876,51 @@ export default function App() {
     setIsMuted(muted);
   };
 
-  // In online mode: restrict bidding buttons based on player role
-  const isP1Disabled = onlineState.isConnected && onlineState.role !== 'host';
-  const isP2Disabled = onlineState.isConnected && onlineState.role !== 'guest';
+  // Perspective mapping: in online mode, each player always sees themselves on the LEFT in GREEN ("Bạn")
+  // and their opponent on the RIGHT in RED ("Đối thủ"), while keeping p1/p2 IDs intact for network sync.
+  const isGuestView = onlineState.isConnected && onlineState.role === 'guest';
+
+  const formatDisplayPlayer = (mgr, isSelf) => {
+    if (!onlineState.isConnected) return mgr;
+    const baseName = mgr.name
+      .replace(/\s*\(Bạn\)\s*$/i, '')
+      .replace(/\s*\(Đối thủ\)\s*$/i, '')
+      .trim();
+    return {
+      ...mgr,
+      name: `${baseName} (${isSelf ? 'Bạn' : 'Đối thủ'})`
+    };
+  };
+
+  const leftPlayer = isGuestView
+    ? formatDisplayPlayer(player2, true)
+    : formatDisplayPlayer(player1, true);
+  const rightPlayer = isGuestView
+    ? formatDisplayPlayer(player1, false)
+    : formatDisplayPlayer(player2, false);
+
+  const leftMaxBid = isGuestView ? p2MaxBid : p1MaxBid;
+  const rightMaxBid = isGuestView ? p1MaxBid : p2MaxBid;
+  const leftPassed = isGuestView ? p2Passed : p1Passed;
+  const rightPassed = isGuestView ? p1Passed : p2Passed;
+  const isLeftDisabled = onlineState.isConnected ? false : false;
+  const isRightDisabled = onlineState.isConnected ? true : false;
+  const leftReady = isGuestView ? p2AuctionReady : p1AuctionReady;
+  const rightReady = isGuestView ? p1AuctionReady : p2AuctionReady;
+  const leftTacticsReady = isGuestView ? p2TacticsReady : p1TacticsReady;
+  const rightTacticsReady = isGuestView ? p1TacticsReady : p2TacticsReady;
 
   return (
     <div className="min-h-screen text-slate-100 flex flex-col relative">
       {/* Full-Web Half-Screen Background Light for Current Highest Bidder */}
       <div
         className={`fixed inset-y-0 left-0 w-1/2 pointer-events-none transition-opacity duration-500 z-0 bg-gradient-to-r from-emerald-500/45 via-emerald-500/22 to-transparent ${
-          gameState === 'auction' && highestBidder?.id === player1.id ? 'opacity-100' : 'opacity-0'
+          gameState === 'auction' && highestBidder?.id === leftPlayer.id ? 'opacity-100' : 'opacity-0'
         }`}
       />
       <div
         className={`fixed inset-y-0 right-0 w-1/2 pointer-events-none transition-opacity duration-500 z-0 bg-gradient-to-l from-rose-500/45 via-rose-500/22 to-transparent ${
-          gameState === 'auction' && highestBidder?.id === player2.id ? 'opacity-100' : 'opacity-0'
+          gameState === 'auction' && highestBidder?.id === rightPlayer.id ? 'opacity-100' : 'opacity-0'
         }`}
       />
 
@@ -810,20 +940,20 @@ export default function App() {
           </div>
         </div>
 
-        {/* TV Broadcast Scorebug: P1 vs P2 */}
+        {/* TV Broadcast Scorebug: Self (Green) vs Opponent (Red) */}
         <div className="flex items-stretch rounded overflow-hidden border border-slate-800 bg-slate-900/90 shadow-lg">
           <button
             type="button"
             onClick={() => setShowProfileModal(true)}
             className="flex items-center gap-2.5 px-3 py-1.5 border-l-4 border-l-emerald-400 hover:bg-slate-800/70 transition-colors cursor-pointer text-xs"
-            title="Bấm để đổi tên HLV 1"
+            title="Bấm để đổi tên của bạn"
           >
             <span className="font-display text-sm font-extrabold text-emerald-400 uppercase tracking-wide">
-              {player1.name}
+              {leftPlayer.name}
             </span>
-            <span className="font-mono-num font-bold text-amber-400">{player1.budget}M</span>
+            <span className="font-mono-num font-bold text-amber-400">{leftPlayer.budget}M</span>
             <span className="font-mono-num text-[10px] bg-slate-950 px-1.5 py-0.5 rounded-sm text-slate-300 border border-slate-800">
-              {Object.keys(player1.squad).length}/11
+              {Object.keys(leftPlayer.squad).length}/11
             </span>
           </button>
 
@@ -835,20 +965,29 @@ export default function App() {
             type="button"
             onClick={() => setShowProfileModal(true)}
             className="flex items-center gap-2.5 px-3 py-1.5 border-r-4 border-r-rose-500 border-y border-y-rose-500/40 bg-rose-950/20 hover:bg-rose-950/35 transition-colors cursor-pointer text-xs"
-            title="Bấm để đổi tên HLV 2 (Đối thủ)"
+            title="Bấm để đổi tên đối thủ"
           >
             <span className="font-mono-num text-[10px] bg-slate-950 px-1.5 py-0.5 rounded-sm text-slate-300 border border-rose-500/30">
-              {Object.keys(player2.squad).length}/11
+              {Object.keys(rightPlayer.squad).length}/11
             </span>
-            <span className="font-mono-num font-bold text-amber-400">{player2.budget}M</span>
+            <span className="font-mono-num font-bold text-amber-400">{rightPlayer.budget}M</span>
             <span className="font-display text-sm font-extrabold text-rose-400 uppercase tracking-wide">
-              {player2.name}
+              {rightPlayer.name}
             </span>
           </button>
         </div>
 
         {/* Minimal Utility Controls */}
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowGuideModal(true)}
+            className="px-3 py-1.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5"
+            title="Hướng dẫn cách chơi, CHEM, đổi vị trí & đấu giá"
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+            <span>Hướng Dẫn</span>
+          </button>
+
           <button
             onClick={() => setShowProfileModal(true)}
             className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
@@ -899,15 +1038,15 @@ export default function App() {
           />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
-            {/* Left: P1 Squad Pitch (Green) */}
+            {/* Left: Self Squad Pitch (Green) */}
             <div className="lg:col-span-3">
               <PitchView 
-                squad={player1.squad} 
-                budget={player1.budget} 
-                title={player1.name} 
+                squad={leftPlayer.squad} 
+                budget={leftPlayer.budget} 
+                title={leftPlayer.name} 
                 isOpponent={false}
                 allowCamCdmChoice={gameState === 'tactics'}
-                onSwap={onlineState.role === 'guest' ? null : handleP1Swap}
+                onSwap={isGuestView ? handleP2Swap : handleP1Swap}
               />
             </div>
 
@@ -921,45 +1060,48 @@ export default function App() {
                 timeLeft={timeLeft}
                 currentBid={currentBid}
                 highestBidder={highestBidder}
-                player1={player1}
-                player2={player2}
-                p1MaxBid={p1MaxBid}
-                p2MaxBid={p2MaxBid}
-                onP1Bid={(amt) => handleLocalBid(player1, amt, true)}
-                onP1Pass={() => handlePass('p1')}
-                onP2Bid={(amt) => handleLocalBid(player2, amt, true)}
-                onP2Pass={() => handlePass('p2')}
-                p1Passed={p1Passed}
-                p2Passed={p2Passed}
+                player1={leftPlayer}
+                player2={rightPlayer}
+                p1MaxBid={leftMaxBid}
+                p2MaxBid={rightMaxBid}
+                onP1Bid={(amt) => handleLocalBid(isGuestView ? player2 : player1, amt, true)}
+                onP1Pass={() => handlePass(isGuestView ? 'p2' : 'p1')}
+                onP2Bid={(amt) => handleLocalBid(isGuestView ? player1 : player2, amt, true)}
+                onP2Pass={() => handlePass(isGuestView ? 'p1' : 'p2')}
+                p1Passed={leftPassed}
+                p2Passed={rightPassed}
                 isP2Bot={isP2Bot}
                 onToggleP2Bot={() => setIsP2Bot(!isP2Bot)}
                 bidHistory={bidHistory}
                 isAuctionActive={isAuctionActive}
-                isP1Disabled={isP1Disabled}
-                isP2Disabled={isP2Disabled}
+                isP1Disabled={isLeftDisabled}
+                isP2Disabled={isRightDisabled}
+                isP1Turn={currentTurn === (isGuestView ? 'p2' : 'p1')}
+                isP2Turn={currentTurn === (isGuestView ? 'p1' : 'p2')}
+                onStageBid={handleExtendTurnTimer}
                 isLobby={gameState === 'lobby'}
-                p1Ready={p1AuctionReady}
-                p2Ready={p2AuctionReady}
-                onP1Ready={() => handleToggleAuctionReady('p1')}
-                onP2Ready={() => handleToggleAuctionReady('p2')}
+                p1Ready={leftReady}
+                p2Ready={rightReady}
+                onP1Ready={() => handleToggleAuctionReady(isGuestView ? 'p2' : 'p1')}
+                onP2Ready={() => handleToggleAuctionReady(isGuestView ? 'p1' : 'p2')}
                 isTactics={gameState === 'tactics'}
                 tacticsTimeLeft={tacticsTimeLeft}
-                p1TacticsReady={p1TacticsReady}
-                p2TacticsReady={p2TacticsReady}
-                onP1TacticsReady={() => handleToggleTacticsReady('p1')}
-                onP2TacticsReady={() => handleToggleTacticsReady('p2')}
+                p1TacticsReady={leftTacticsReady}
+                p2TacticsReady={rightTacticsReady}
+                onP1TacticsReady={() => handleToggleTacticsReady(isGuestView ? 'p2' : 'p1')}
+                onP2TacticsReady={() => handleToggleTacticsReady(isGuestView ? 'p1' : 'p2')}
               />
             </div>
 
-            {/* Right: P2 Squad Pitch (Opponent - Red with Red Border) */}
+            {/* Right: Opponent Squad Pitch (Red with Red Border) */}
             <div className="lg:col-span-3">
               <PitchView 
-                squad={player2.squad} 
-                budget={player2.budget} 
-                title={player2.name} 
+                squad={rightPlayer.squad} 
+                budget={rightPlayer.budget} 
+                title={rightPlayer.name} 
                 isOpponent={true}
                 allowCamCdmChoice={gameState === 'tactics'}
-                onSwap={onlineState.role === 'host' ? null : handleP2Swap}
+                onSwap={onlineState.isConnected ? null : handleP2Swap}
               />
             </div>
           </div>
@@ -969,8 +1111,9 @@ export default function App() {
       {/* Round End Result Modal */}
       {gameState === 'round_result' && (
         <MysteryBoxModal 
-          winnerInfo={roundWinnerInfo}
-          loserInfo={roundLoserInfo}
+          winnerInfo={roundWinnerInfo ? formatDisplayPlayer(roundWinnerInfo, roundWinnerInfo.id === (isGuestView ? 'p2' : 'p1')) : null}
+          loserInfo={roundLoserInfo ? formatDisplayPlayer(roundLoserInfo, roundLoserInfo.id === (isGuestView ? 'p2' : 'p1')) : null}
+          viewerRoleId={isGuestView ? 'p2' : 'p1'}
           tier1Player={roundTier1}
           tier2Player={roundTier2}
           roundCategoryName={currentRoundInfo?.name}
@@ -996,11 +1139,18 @@ export default function App() {
       {showOnlineModal && (
         <OnlineRoomModal
           onlineState={onlineState}
+          account={onlineAccount}
+          onAccountChange={handleOnlineAccountChange}
           onHostRoom={handleHostOnlineRoom}
           onJoinRoom={handleJoinOnlineRoom}
           onDisconnect={handleDisconnectOnline}
           onClose={() => setShowOnlineModal(false)}
         />
+      )}
+
+      {/* Guide / How to Play Modal */}
+      {showGuideModal && (
+        <GuideModal onClose={() => setShowGuideModal(false)} />
       )}
     </div>
   );

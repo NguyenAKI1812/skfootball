@@ -74,3 +74,46 @@ create trigger trg_auction_rooms_updated_at
   before update on public.auction_rooms
   for each row
   execute function public.set_auction_rooms_updated_at();
+
+-- ============================================================================
+-- 5. BẢNG TÀI KHOẢN & TÊN HIỂN THỊ NGƯỜI CHƠI ONLINE (player_profiles)
+-- ============================================================================
+create table if not exists public.player_profiles (
+  id uuid primary key default gen_random_uuid(),
+  username text unique not null,
+  password_hash text not null,
+  display_name text not null,
+  avatar text not null default '⚽',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_player_profiles_username
+  on public.player_profiles (username);
+
+alter table public.player_profiles enable row level security;
+
+drop policy if exists "Allow public read player_profiles" on public.player_profiles;
+create policy "Allow public read player_profiles"
+  on public.player_profiles for select
+  to anon, authenticated
+  using (true);
+
+drop policy if exists "Allow public insert player_profiles" on public.player_profiles;
+create policy "Allow public insert player_profiles"
+  on public.player_profiles for insert
+  to anon, authenticated
+  with check (true);
+
+drop policy if exists "Allow public update player_profiles" on public.player_profiles;
+create policy "Allow public update player_profiles"
+  on public.player_profiles for update
+  to anon, authenticated
+  using (true)
+  with check (true);
+
+drop trigger if exists trg_player_profiles_updated_at on public.player_profiles;
+create trigger trg_player_profiles_updated_at
+  before update on public.player_profiles
+  for each row
+  execute function public.set_auction_rooms_updated_at();

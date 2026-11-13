@@ -66,17 +66,17 @@ export default function PlayerCard({ player, compact = false, highlight = false,
       </div>
 
       {/* FUT-style Rating + Portrait Layout */}
-      <div className={`relative flex items-center justify-center ${size === 'modal' ? 'gap-3 py-0.5' : 'gap-4 py-1'} z-10`}>
+      <div className={`relative flex items-center justify-center ${size === 'modal' ? 'gap-4 py-1' : 'gap-4 py-1'} z-10`}>
         {/* Stacked OVR & POS on left like an official FUT card */}
-        <div className={`flex flex-col items-center justify-center ${size === 'modal' ? 'pr-2.5' : 'pr-3'} border-r border-amber-500/25`}>
+        <div className={`flex flex-col items-center justify-center ${size === 'modal' ? 'pr-3' : 'pr-3'} border-r border-amber-500/25`}>
           <span
-            className={`font-display ${size === 'modal' ? 'text-4xl' : 'text-5xl'} font-extrabold leading-none tracking-tight ${
+            className={`font-display ${size === 'modal' ? 'text-5xl' : 'text-5xl'} font-extrabold leading-none tracking-tight ${
               isTier1 ? 'text-amber-300' : 'text-slate-100'
             }`}
           >
             {player.ovr}
           </span>
-          <span className={`font-display ${size === 'modal' ? 'text-sm' : 'text-base'} font-bold tracking-widest text-emerald-400 mt-1`}>
+          <span className={`font-display ${size === 'modal' ? 'text-base' : 'text-base'} font-bold tracking-widest text-emerald-400 mt-1`}>
             {posCode}
           </span>
         </div>
@@ -85,7 +85,7 @@ export default function PlayerCard({ player, compact = false, highlight = false,
         <div className="relative">
           {player.photo && !imgError ? (
             <div
-              className={`${size === 'modal' ? 'w-24 h-24' : 'w-36 h-36'} rounded-lg overflow-hidden border shadow-lg ${
+              className={`${size === 'modal' ? 'w-32 h-32' : 'w-36 h-36'} rounded-lg overflow-hidden border shadow-lg ${
                 isTier1 ? 'border-amber-400/70' : 'border-slate-500/70'
               }`}
             >
@@ -97,7 +97,7 @@ export default function PlayerCard({ player, compact = false, highlight = false,
               />
             </div>
           ) : (
-            <div className={`${size === 'modal' ? 'w-24 h-24 text-3xl' : 'w-36 h-36 text-4xl'} rounded-lg bg-slate-800/90 flex items-center justify-center font-display font-extrabold text-amber-400 border border-slate-700`}>
+            <div className={`${size === 'modal' ? 'w-32 h-32 text-4xl' : 'w-36 h-36 text-4xl'} rounded-lg bg-slate-800/90 flex items-center justify-center font-display font-extrabold text-amber-400 border border-slate-700`}>
               {player.name.slice(0, 2).toUpperCase()}
             </div>
           )}
@@ -105,8 +105,8 @@ export default function PlayerCard({ player, compact = false, highlight = false,
       </div>
 
       {/* Clean Divider & Nameplate */}
-      <div className={`${size === 'modal' ? 'mt-2 pt-1.5' : 'mt-3 pt-2'} border-t border-white/10 text-center relative z-10`}>
-        <h3 className={`font-display ${size === 'modal' ? 'text-xl' : 'text-2xl'} font-extrabold text-white tracking-wide uppercase truncate leading-none`}>
+      <div className={`${size === 'modal' ? 'mt-2.5 pt-2' : 'mt-3 pt-2'} border-t border-white/10 text-center relative z-10`}>
+        <h3 className={`font-display ${size === 'modal' ? 'text-2xl' : 'text-2xl'} font-extrabold text-white tracking-wide uppercase truncate leading-none`}>
           {player.name}
         </h3>
         <div className="text-[11px] text-slate-300 font-semibold mt-1 flex items-center justify-center gap-1.5 uppercase tracking-wider truncate">

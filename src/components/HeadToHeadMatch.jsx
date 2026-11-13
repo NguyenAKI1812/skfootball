@@ -101,7 +101,27 @@ export default function HeadToHeadMatch({
       "VÔ-LÊ NỬA NẢY SẤM SÉT: Bóng bật ra từ quả phạt góc, vung chân bắt vô-lê một chạm căng như kẻ chỉ tung nóc lưới đối phương!",
       "ĐÁ PHẠT THẦN SẦU: Đứng trước quả đá phạt cự ly 25m, vẽ nên đường cong cầu vồng đưa bóng lượn qua hàng rào găm vào góc cao không thể cản phá!",
       "XE ĐẠP CHỔNG NGƯỢC ĐỈNH CAO: Đón đường treo bóng bổng trong vòng cấm, ngả người tung cú móc bóng ngoạn mục khiến cả sân vận động vỡ òa!",
-      "PHẢN CÔNG CHỚP NHOÁNG: Bứt tốc xé gió vượt qua bẫy việt vị rồi tung cú sút chìm chéo góc lạnh lùng hạ gục thủ môn trong pha đối mặt!"
+      "PHẢN CÔNG CHỚP NHOÁNG: Bứt tốc xé gió vượt qua bẫy việt vị rồi tung cú sút chìm chéo góc lạnh lùng hạ gục thủ môn trong pha đối mặt!",
+      "PHỐI HỢP TIKI-TAKA MẪU MỰC: Bật nhả một-hai xé toạc vòng cấm rồi tung cú sút chân trái gọn gàng vào góc gần không cho thủ môn cơ hội phản xạ!",
+      "TRIVELA MÁ NGOÀI ĐẲNG CẤP: Thoát xuống bên hành lang phải rồi vẩy má ngoài cực xoáy đưa bóng găm thẳng vào mép trong cột dọc bay vào lưới!",
+      "DỨT ĐIỂM BÙNG NỔ PHÚT QUYẾT ĐỊNH: Đỡ ngực khống chế gọn gàng giữa vòng vây hậu vệ rồi xoay người sút tung nóc lưới trong tiếng hò reo vang dội!",
+      "ĐÁNH GÓT NGẪU HỨNG ĐIÊN RỒ: Quay lưng về phía khung thành nhưng vẫn giật gót tinh quái đưa bóng lọt qua khe chân thủ môn đi thẳng vào lưới!",
+      "LỐP BÓNG KỸ THUẬT ĐỈNH CAO: Quan sát thấy thủ môn dâng cao, thực hiện cú lốp bóng mềm mại từ rìa vòng cấm vẽ cầu vồng vào góc xa!",
+      "SÚT BỒI CHỚP NHOÁNG: Pha dứt điểm đầu tiên bị đẩy ra nhưng đã ập vào cực nhanh đá bồi tung lưới trong sự bất lực của hàng thủ!",
+      "CÚ SÚT CHẾT CHÓC GÓC HẸP: Thoát xuống sát đường biên ngang rồi tung cú nã đại bác ở góc cực hẹp đưa bóng dội xà ngang bay vào lưới!"
+    ];
+
+    const PENALTY_GOAL_TEMPLATES = [
+      "PENALTY 11M · PANENKA ĐẲNG CẤP: Trên chấm phạt đền 11m, bình tĩnh tung cú sục bóng kiểu Panenka điệu nghệ vào chính giữa khung thành khi thủ môn đã đổ người!",
+      "PENALTY 11M · SÚT PHẠT ĐỀN LẠNH LÙNG: Trọng tài chỉ tay vào chấm 11m sau pha phạm lỗi trong vòng cấm! Cú sút căng như búa bổ găm thẳng vào góc chữ A không thể cản phá!",
+      "PENALTY 11M · ĐÁNH LỪA THỦ MÔN HOÀN HẢO: Chạy đà đầy bản lĩnh, nhử thủ môn đổ người sang trái rồi nhẹ nhàng đặt lòng vào góc phải làm tung lưới!",
+      "PENALTY 11M · DỨT ĐIỂM QUYẾT ĐOÁN: Áp lực ngàn cân trên chấm phạt đền nhưng vẫn tung cú sút chìm cực hiểm sát mép cột dọc mang về bàn thắng quý giá!"
+    ];
+
+    const PENALTY_SAVED_TEMPLATES = [
+      "CẢN PHÁ PENALTY 11M XUẤT THẦN: Đối mặt cú sút phạt đền trên chấm 11m, thủ môn đổ người đoán đúng hướng đẩy bóng dội cột dọc cứu thua ngoạn mục!",
+      "NGƯỜI HÙNG TRÊN CHẤM 11M: Bay người hết cỡ từ chối cú sút penalty hiểm hóc vào góc thấp, giữ vững tinh thần cho toàn đội!",
+      "BẮT BÀI PHẠT ĐỀN ĐIỂM 10: Không bị đánh lừa bởi nhịp chạy đà, đứng vững rồi tung tay cản phá thành công quả phạt đền 11m!"
     ];
 
     const SAVE_TEMPLATES = [
@@ -109,36 +129,40 @@ export default function HeadToHeadMatch({
       "BAY NGƯỜI CỨU THUA KHÔNG TƯỞNG: Bay người như cánh chim ưng trong không trung, tung tay đẩy quả bóng đang bay vào góc chết vọt xà ngang trong sự thán phục của khán đài!",
       "BỨC TƯỜNG THÉP TRƯỚC KHUNG THÀNH: Lao ra khép góc cực kỳ dũng cảm trong pha đối mặt một chọi một, cản phá thành công cú dứt điểm hiểm hóc!",
       "PHẢN XẠ BẰNG CHÂN ĐIỂM 10: Tiền đạo đệm bóng cận thành chỉ cách 5m, nhưng thủ môn phản xạ bằng chân chớp nhoáng chặn đứng bóng ngay trên vạch vôi!",
-      "CỨU THUA KÉP NGOẠN MỤC: Đẩy được cú đá phạt hiểm hóc rồi lập tức bật dậy cản phá nốt pha đá bồi cận thành trong sự ngỡ ngàng của đối thủ!"
+      "CỨU THUA KÉP NGOẠN MỤC: Đẩy được cú đá phạt hiểm hóc rồi lập tức bật dậy cản phá nốt pha đá bồi cận thành trong sự ngỡ ngàng của đối thủ!",
+      "BẮT DÍNH BÓNG QUẢ CẢM: Băng ra giữa rừng cầu thủ trong tình huống phạt góc và đấm bóng giải nguy chuẩn xác, giải tỏa hoàn toàn sức ép!",
+      "CẢN PHÁ CÚ CỨA LÒNG HIỂM HÓC: Rướn người hết tầm đẩy bóng qua xà ngang sau cú cứa lòng như vẽ vào góc cao khung thành!",
+      "KHÉP GÓC THẦN TỐC: Băng ra như tia chớp khép kín mọi khoảng trống khiến tiền đạo đối phương không thể dứt điểm thành công!"
     ];
 
     const WOODWORK_TEMPLATES = [
       "BÓNG DỘI XÀ NGANG TRONG GANG TẤC: Pha xoay sở đẳng cấp rồi dứt điểm cực căng, bóng đánh bại thủ môn nhưng lại tìm đến đúng xà ngang bật ra ngoài trong tiếc nuối!",
       "ĐẬP CỘT DỌC NGHẸT THỞ: Cú cứa lòng quá hiểm hóc khiến thủ môn đứng hình, tiếc rằng bóng đập trúng cột dọc bật ngược trở lại sân!",
-      "BÓNG ĐẬP MÉP TRONG CỘT DỌC: Pha bắt vô-lê tuyến hai đưa bóng dội mép trong cột dọc rồi lăn ngang qua vạch vôi ra ngoài trong gang tấc!"
+      "BÓNG ĐẬP MÉP TRONG CỘT DỌC: Pha bắt vô-lê tuyến hai đưa bóng dội mép trong cột dọc rồi lăn ngang qua vạch vôi ra ngoài trong gang tấc!",
+      "XÀ NGANG TỪ CHỐI SIÊU PHẨM: Cú sút phạt hàng rào cực xoáy đưa bóng liếm mép trên xà ngang bay vọt ra ngoài chỉ vài centimet!",
+      "HAI LẦN DỘI KHUNG GỖ: Cú sút xa đập xà ngang bật ra, pha đá bồi ngay sau đó lại tiếp tục tìm trúng cột dọc đầy trớ trêu!"
     ];
 
     const DEFENSE_TEMPLATES = [
       "XOẠC BÓNG GIẢI NGUY HOÀN HẢO: Cú tắc bóng chính xác đến từng milimet ngay trong vòng cấm, tước đi cơ hội mười mươi trước khi tiền đạo kịp vung chân!",
       "CỨU THUA NGAY TRÊN VẠCH VÔI: Thủ môn đã bị đánh bại nhưng trung vệ bọc lót thần tốc, tung người phá bóng bằng đầu giải nguy ngay trước vạch vôi!",
       "TRANH CHẤP DŨNG MÃNH: Dùng sức mạnh và phán đoán tuyệt vời phong tỏa hoàn toàn đường đi bóng nguy hiểm của mũi nhọn tấn công đối phương!",
-      "CẮT BÓNG ĐỌC TÌNH HUỐNG XUẤT SẮC: Phán đoán chuẩn xác đường chọc khe xuyên tuyến, lao lên cắt bóng gọn ghẽ và phát động phản công ngay lập tức!"
-    ];
-
-    const ASSIST_TEMPLATES = [
-      "ĐƯỜNG CHUYỀN XÉ TOẠC HÀNG THỦ: Một pha vẩy má ngoài Trivela điệu nghệ mở toang khoảng trống, đặt đồng đội vào tư thế đối mặt thủ môn!",
-      "ĐẢO CHÂN MA THUẬT: Pha xử lý kỹ thuật đỉnh cao qua 2 người bên hành lang cánh rồi tung đường căng ngang dọn cỗ xé toạc phòng tuyến đối phương!",
-      "CHỌC KHE SÁT THỦ: Từ khu vực giữa sân, tung đường chuyền xẻ nách tinh tế loại bỏ toàn bộ hàng phòng ngự đang dâng cao!"
+      "CẮT BÓNG ĐỌC TÌNH HUỐNG XUẤT SẮC: Phán đoán chuẩn xác đường chọc khe xuyên tuyến, lao lên cắt bóng gọn ghẽ và phát động phản công ngay lập tức!",
+      "CHE CHẮN VÀ ĐOẠT BÓNG LẠNH LÙNG: Đọc ý đồ ngoặt bóng của tiền đạo cánh, cài người hợp lệ rồi đoạt bóng sạch sẽ ngay sát đường biên!",
+      "ĐEO BÁM KHÔNG BIẾT MỆT MỎI: Bắt bài pha đảo chân kỹ thuật của đối thủ và dùng vai tì đè hợp lệ đoạt lại quyền kiểm soát bóng!"
     ];
 
     const CARD_TEMPLATES = [
       "PHẠM LỖI CHIẾN THUẬT: Nhận thấy đối phương đang mở đợt phản công nhanh nguy hiểm, đã chủ động kéo áo ngăn cản và phải nhận thẻ vàng cảnh cáo!",
-      "VÀO BÓNG QUYẾT LIỆT QUÁ MỨC: Pha tranh chấp tầm cao khá rát ở khu vực giữa sân khiến trọng tài lập tức rút thẻ vàng nhắc nhở!"
+      "VÀO BÓNG QUYẾT LIỆT QUÁ MỨC: Pha tranh chấp tầm cao khá rát ở khu vực giữa sân khiến trọng tài lập tức rút thẻ vàng nhắc nhở!",
+      "NGĂN CẢN ĐÁ PHẠT NHANH: Đứng chắn trước bóng làm chậm pha lên bóng của đối thủ và lập tức phải nhận thẻ vàng từ trọng tài chính!",
+      "PHẢN ỨNG THÁI QUÁ VỚI TRỌNG TÀI: Không giữ được bình tĩnh sau tình huống tranh cãi và phải nhận ngay thẻ vàng cảnh cáo!"
     ];
 
     const RED_CARD_TEMPLATES = [
       "THẺ ĐỎ TRỰC TIẾP: Pha xoạc bóng bằng cả hai chân cực kỳ nguy hiểm từ phía sau, trọng tài không ngần ngại rút thẻ đỏ truất quyền thi đấu!",
-      "PHẠM LỖI NGĂN CẢN BÀN THẮNG RÕ RỆT: Kéo ngã tiền đạo đối phương ngay trước vòng cấm trong tư thế đối mặt thủ môn, nhận thẻ đỏ trực tiếp rời sân!"
+      "PHẠM LỖI NGĂN CẢN BÀN THẮNG RÕ RỆT: Kéo ngã tiền đạo đối phương ngay trước vòng cấm trong tư thế đối mặt thủ môn, nhận thẻ đỏ trực tiếp rời sân!",
+      "THẺ VÀNG THỨ HAI · RỜI SÂN: Pha vào bóng chậm một nhịp ở khu vực trung lộ buộc trọng tài rút thẻ vàng thứ hai, đồng nghĩa với chiếc thẻ đỏ!"
     ];
 
     const getRandomItem = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -154,29 +178,65 @@ export default function HeadToHeadMatch({
     // Distribution of events
     const rawEvents = [];
 
-    // Goals for P1
+    const pickAssistPlayer = (teamObj, scorer) => {
+      if (Math.random() > 0.78) return null; // ~78% of goals have an assist
+      const pool = [...teamObj.mfs, ...teamObj.fws, ...teamObj.dfs].filter(
+        (p) => p && p.id !== scorer?.id
+      );
+      return getRandomItem(pool) || null;
+    };
+
+    // Goals for P1 (including occasional in-match Penalty Goal)
     for (let i = 0; i < g1; i++) {
       const scorer = getRandomItem([...t1.fws, ...t1.mfs]) || t1.squadList[0];
+      const isPenGoal = Math.random() < 0.22;
+      const assistPlayer = isPenGoal ? null : pickAssistPlayer(t1, scorer);
       rawEvents.push({
         team: 1,
         type: 'GOAL',
-        badgeText: 'GOAL · BÀN THẮNG',
-        badgeClass: 'bg-emerald-500 text-slate-950 border-emerald-300',
+        isPenalty: isPenGoal,
+        badgeText: isPenGoal ? 'PENALTY 11M · BÀN THẮNG' : 'GOAL · BÀN THẮNG',
+        badgeClass: isPenGoal
+          ? 'bg-amber-400 text-slate-950 border-amber-200'
+          : 'bg-emerald-500 text-slate-950 border-emerald-300',
         player: scorer,
-        desc: getRandomItem(GOAL_TEMPLATES)
+        assistPlayer,
+        desc: getRandomItem(isPenGoal ? PENALTY_GOAL_TEMPLATES : GOAL_TEMPLATES)
       });
     }
 
-    // Goals for P2
+    // Goals for P2 (including occasional in-match Penalty Goal)
     for (let i = 0; i < g2; i++) {
       const scorer = getRandomItem([...t2.fws, ...t2.mfs]) || t2.squadList[0];
+      const isPenGoal = Math.random() < 0.22;
+      const assistPlayer = isPenGoal ? null : pickAssistPlayer(t2, scorer);
       rawEvents.push({
         team: 2,
         type: 'GOAL',
-        badgeText: 'GOAL · BÀN THẮNG',
-        badgeClass: 'bg-rose-600 text-white border-rose-300',
+        isPenalty: isPenGoal,
+        badgeText: isPenGoal ? 'PENALTY 11M · BÀN THẮNG' : 'GOAL · BÀN THẮNG',
+        badgeClass: isPenGoal
+          ? 'bg-amber-400 text-slate-950 border-amber-200'
+          : 'bg-rose-600 text-white border-rose-300',
         player: scorer,
-        desc: getRandomItem(GOAL_TEMPLATES)
+        assistPlayer,
+        desc: getRandomItem(isPenGoal ? PENALTY_GOAL_TEMPLATES : GOAL_TEMPLATES)
+      });
+    }
+
+    // Occasional in-match Penalty Saved event (~45% chance)
+    if (Math.random() < 0.45) {
+      const penSaveTeam = Math.random() > 0.5 ? 1 : 2;
+      const penSaveGk = penSaveTeam === 1
+        ? (getRandomItem(t1.gks) || t1.squadList[0])
+        : (getRandomItem(t2.gks) || t2.squadList[0]);
+      rawEvents.push({
+        team: penSaveTeam,
+        type: 'PENALTY_SAVED',
+        badgeText: 'PENALTY SAVED · CẢN PHÁ 11M',
+        badgeClass: 'bg-amber-400 text-slate-950 border-amber-200',
+        player: penSaveGk,
+        desc: getRandomItem(PENALTY_SAVED_TEMPLATES)
       });
     }
 
@@ -230,20 +290,6 @@ export default function HeadToHeadMatch({
       badgeClass: 'bg-amber-400 text-slate-950 border-amber-200',
       player: woodPlayer,
       desc: getRandomItem(WOODWORK_TEMPLATES)
-    });
-
-    // Assist / Chance
-    const assistTeam = Math.random() > 0.5 ? 1 : 2;
-    const assistPlayer = assistTeam === 1
-      ? (getRandomItem(t1.mfs) || t1.squadList[0])
-      : (getRandomItem(t2.mfs) || t2.squadList[0]);
-    rawEvents.push({
-      team: assistTeam,
-      type: 'ASSIST',
-      badgeText: 'KEY PASS · KIẾN TẠO',
-      badgeClass: 'bg-indigo-500 text-white border-indigo-300',
-      player: assistPlayer,
-      desc: getRandomItem(ASSIST_TEMPLATES)
     });
 
     // Yellow Card or Red Card
@@ -600,10 +646,10 @@ export default function HeadToHeadMatch({
   const p2Power = t2.avgOvr * 0.65 + t2.chem * 0.35 + evT2.length * 1.5;
   const poss1 = Math.min(68, Math.max(32, Math.round((p1Power / (p1Power + p2Power || 1)) * 100)));
   const poss2 = 100 - poss1;
-  const shots1 = evT1.filter(e => e.type === 'GOAL' || e.type === 'WOODWORK' || e.type === 'ASSIST').length + (matchPhase === 'lobby' ? 0 : Math.floor(currentMinute / 22));
-  const shots2 = evT2.filter(e => e.type === 'GOAL' || e.type === 'WOODWORK' || e.type === 'ASSIST').length + (matchPhase === 'lobby' ? 0 : Math.floor(currentMinute / 22));
-  const saves1 = evT1.filter(e => e.type === 'SAVE' || e.type === 'DEFENSE').length;
-  const saves2 = evT2.filter(e => e.type === 'SAVE' || e.type === 'DEFENSE').length;
+  const shots1 = evT1.filter(e => e.type === 'GOAL' || e.type === 'WOODWORK' || e.type === 'ASSIST').length + evT2.filter(e => e.type === 'PENALTY_SAVED').length + (matchPhase === 'lobby' ? 0 : Math.floor(currentMinute / 22));
+  const shots2 = evT2.filter(e => e.type === 'GOAL' || e.type === 'WOODWORK' || e.type === 'ASSIST').length + evT1.filter(e => e.type === 'PENALTY_SAVED').length + (matchPhase === 'lobby' ? 0 : Math.floor(currentMinute / 22));
+  const saves1 = evT1.filter(e => e.type === 'SAVE' || e.type === 'DEFENSE' || e.type === 'PENALTY_SAVED').length;
+  const saves2 = evT2.filter(e => e.type === 'SAVE' || e.type === 'DEFENSE' || e.type === 'PENALTY_SAVED').length;
   const cards1 = evT1.filter(e => e.type === 'CARD' || e.type === 'RED_CARD').length;
   const cards2 = evT2.filter(e => e.type === 'CARD' || e.type === 'RED_CARD').length;
 
@@ -614,6 +660,7 @@ export default function HeadToHeadMatch({
     GOAL: 'BÀN THẮNG',
     ASSIST: 'KIẾN TẠO',
     SAVE: 'CỨU THUA',
+    PENALTY_SAVED: 'CẢN PHÁ 11M',
     DEFENSE: 'CẢN PHÁ',
     WOODWORK: 'CỘT DỌC',
     CARD: 'THẺ VÀNG',
@@ -621,25 +668,138 @@ export default function HeadToHeadMatch({
     PENALTY: 'LUÂN LƯU 11M',
   };
 
+  const HIGHLIGHT_KEYWORDS_REGEX = /(góc chữ A|góc chết|góc cao|góc xa|góc gần|góc cực hẹp|tung lưới|tung nóc lưới|không thể cản phá|siêu phẩm|cứu thua|cản phá|phản xạ|trên vạch vôi|cứu bàn thua mười mươi|xà ngang|cột dọc|khung gỗ|thẻ vàng|thẻ đỏ|truất quyền thi đấu|chấm phạt đền 11m|chấm phạt đền|chấm 11m|phạt đền 11m|phạt đền|penalty|Panenka|đánh lừa thủ môn|vô-lê|tiki-taka|trivela|xe đạp chổng ngược|cứa lòng|sút xa|đánh đầu|xoạc bóng|chọc khe|đối mặt|bàn thắng|cận thành|ngăn cản bàn thắng|đánh bại)/gi;
+
+  const renderHighlightedText = (text) => {
+    if (!text) return null;
+    const colonIdx = text.indexOf(':');
+    const titlePart = colonIdx !== -1 ? text.slice(0, colonIdx + 1) : '';
+    const bodyPart = colonIdx !== -1 ? text.slice(colonIdx + 1) : text;
+
+    const parts = bodyPart.split(HIGHLIGHT_KEYWORDS_REGEX);
+    return (
+      <>
+        {titlePart && (
+          <span className="text-amber-300 font-extrabold drop-shadow-[0_0_8px_rgba(251,191,36,0.55)]">
+            {titlePart}
+          </span>
+        )}
+        {parts.map((part, idx) =>
+          idx % 2 === 1 ? (
+            <span
+              key={idx}
+              className="text-amber-300 font-bold drop-shadow-[0_0_6px_rgba(251,191,36,0.45)]"
+            >
+              {part}
+            </span>
+          ) : (
+            <React.Fragment key={idx}>{part}</React.Fragment>
+          )
+        )}
+      </>
+    );
+  };
+
+  // Perspective mapping: each online player always sees themselves on the LEFT in GREEN ("Bạn")
+  const isGuestView = onlineState.isConnected && onlineState.role === 'guest';
+  const formatMatchName = (mgr, isSelf) => {
+    if (!onlineState.isConnected || !mgr) return mgr?.name || '';
+    const baseName = mgr.name
+      .replace(/\s*\(Bạn\)\s*$/i, '')
+      .replace(/\s*\(Đối thủ\)\s*$/i, '')
+      .trim();
+    return `${baseName} (${isSelf ? 'Bạn' : 'Đối thủ'})`;
+  };
+
+  const leftTeamNum = isGuestView ? 2 : 1;
+  const rightTeamNum = isGuestView ? 1 : 2;
+  const leftName = isGuestView ? formatMatchName(player2, true) : formatMatchName(player1, true);
+  const rightName = isGuestView ? formatMatchName(player1, false) : formatMatchName(player2, false);
+  const leftTeam = isGuestView ? t2 : t1;
+  const rightTeam = isGuestView ? t1 : t2;
+  const leftScore = isGuestView ? liveScore2 : liveScore1;
+  const rightScore = isGuestView ? liveScore1 : liveScore2;
+  const leftPen = isGuestView ? penScore2 : penScore1;
+  const rightPen = isGuestView ? penScore1 : penScore2;
+  const leftPoss = isGuestView ? poss2 : poss1;
+  const rightPoss = isGuestView ? poss1 : poss2;
+  const leftShots = isGuestView ? shots2 : shots1;
+  const rightShots = isGuestView ? shots1 : shots2;
+  const leftSaves = isGuestView ? saves2 : saves1;
+  const rightSaves = isGuestView ? saves1 : saves2;
+  const leftCards = isGuestView ? cards2 : cards1;
+  const rightCards = isGuestView ? cards1 : cards2;
+  const leftGoals = isGuestView ? goalsT2 : goalsT1;
+  const rightGoals = isGuestView ? goalsT1 : goalsT2;
+  const leftReady = isGuestView ? p2Ready : p1Ready;
+  const rightReady = isGuestView ? p1Ready : p2Ready;
+  const onLeftReady = isGuestView ? handleToggleP2Ready : handleToggleP1Ready;
+  const onRightReady = isGuestView ? handleToggleP1Ready : handleToggleP2Ready;
+  const winnerDisplayName = winner
+    ? (winner.id === (isGuestView ? player2.id : player1.id) ? leftName : rightName)
+    : '';
+
+  const scoreLead =
+    leftScore !== rightScore
+      ? (leftScore > rightScore ? 'left' : 'right')
+      : (leftPen !== null && rightPen !== null && leftPen !== rightPen)
+      ? (leftPen > rightPen ? 'left' : 'right')
+      : 'tie';
+
+  const renderHalfGlow = (lead, strong = false) => (
+    <>
+      <div
+        className={`absolute inset-y-0 left-0 w-1/2 pointer-events-none transition-opacity duration-500 bg-gradient-to-r ${
+          strong ? 'from-emerald-500/35 via-emerald-500/15 to-transparent' : 'from-emerald-500/30 via-emerald-500/12 to-transparent'
+        } ${lead === 'left' ? 'opacity-100' : 'opacity-0'}`}
+      />
+      <div
+        className={`absolute inset-y-0 right-0 w-1/2 pointer-events-none transition-opacity duration-500 bg-gradient-to-l ${
+          strong ? 'from-rose-500/35 via-rose-500/15 to-transparent' : 'from-rose-500/30 via-rose-500/12 to-transparent'
+        } ${lead === 'right' ? 'opacity-100' : 'opacity-0'}`}
+      />
+    </>
+  );
+
+  const possLead = leftPoss > rightPoss ? 'left' : rightPoss > leftPoss ? 'right' : 'tie';
+  const shotsLead = leftShots > rightShots ? 'left' : rightShots > leftShots ? 'right' : 'tie';
+  const savesLead = leftSaves > rightSaves ? 'left' : rightSaves > leftSaves ? 'right' : 'tie';
+  const cardsLead = leftCards > rightCards ? 'left' : rightCards > leftCards ? 'right' : 'tie';
+
   return (
     <div className="broadcast-panel border border-slate-800 rounded-xl p-4 max-w-6xl mx-auto w-full">
       {/* Compact Broadcast Scoreboard */}
       <div className="bg-slate-950/90 border border-slate-800 rounded-lg px-4 py-2.5 mb-3 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-1/3 h-full bg-emerald-500/8 blur-2xl pointer-events-none" />
-        <div className="absolute top-0 right-0 w-1/3 h-full bg-rose-500/10 blur-2xl pointer-events-none" />
+        {renderHalfGlow(scoreLead, true)}
+        {activeHighlight?.type === 'GOAL' && activeHighlight?.team === leftTeamNum && (
+          <div
+            key={`sb-gold-left-${activeHighlight.min}`}
+            className="absolute inset-y-0 left-0 w-1/2 overflow-hidden pointer-events-none z-20"
+          >
+            <div className="goal-gold-sweep" />
+          </div>
+        )}
+        {activeHighlight?.type === 'GOAL' && activeHighlight?.team === rightTeamNum && (
+          <div
+            key={`sb-gold-right-${activeHighlight.min}`}
+            className="absolute inset-y-0 right-0 w-1/2 overflow-hidden pointer-events-none z-20"
+          >
+            <div className="goal-gold-sweep" />
+          </div>
+        )}
 
         <div className="grid grid-cols-12 items-center gap-2 relative z-10">
-          {/* Team 1 (Left - Emerald) */}
+          {/* Team Left (Self - Emerald) */}
           <div className="col-span-4 flex items-center gap-2.5">
             <span className="w-1.5 h-9 bg-emerald-400 rounded-sm shrink-0" />
             <div className="min-w-0">
               <h3 className="font-display text-lg md:text-xl font-extrabold text-emerald-400 tracking-wide uppercase truncate leading-none">
-                {player1.name}
+                {leftName}
               </h3>
               <div className="flex items-center gap-2 mt-1 text-[11px] font-mono-num text-slate-400">
-                <span>OVR <strong className="text-amber-400">{t1.avgOvr}</strong></span>
+                <span>OVR <strong className="text-amber-400">{leftTeam.avgOvr}</strong></span>
                 <span className="text-slate-700">|</span>
-                <span>CHEM <strong className="text-cyan-400">{t1.chem}</strong></span>
+                <span>CHEM <strong className="text-cyan-400">{leftTeam.chem}</strong></span>
               </div>
             </div>
           </div>
@@ -659,18 +819,18 @@ export default function HeadToHeadMatch({
             </div>
 
             <div className="font-mono-num text-4xl md:text-5xl font-extrabold tracking-tight text-white flex items-center gap-3 leading-none">
-              <span className={activeHighlight?.team === 1 && activeHighlight?.type === 'GOAL' ? 'text-emerald-400' : 'text-white'}>
-                {liveScore1}
+              <span className={activeHighlight?.team === leftTeamNum && activeHighlight?.type === 'GOAL' ? 'text-emerald-400' : 'text-white'}>
+                {leftScore}
               </span>
               <span className="text-slate-600 text-2xl font-normal">-</span>
-              <span className={activeHighlight?.team === 2 && activeHighlight?.type === 'GOAL' ? 'text-rose-400' : 'text-white'}>
-                {liveScore2}
+              <span className={activeHighlight?.team === rightTeamNum && activeHighlight?.type === 'GOAL' ? 'text-rose-400' : 'text-white'}>
+                {rightScore}
               </span>
             </div>
 
-            {penScore1 !== null && penScore2 !== null && (
+            {leftPen !== null && rightPen !== null && (
               <span className="font-mono-num text-[11px] font-bold text-amber-400 mt-1">
-                PEN: {penScore1} - {penScore2}
+                PEN: {leftPen} - {rightPen}
               </span>
             )}
 
@@ -682,16 +842,16 @@ export default function HeadToHeadMatch({
             </div>
           </div>
 
-          {/* Team 2 (Right - Opponent Red) */}
+          {/* Team Right (Opponent - Red) */}
           <div className="col-span-4 flex items-center justify-end gap-2.5 text-right">
             <div className="min-w-0">
               <h3 className="font-display text-lg md:text-xl font-extrabold text-rose-400 tracking-wide uppercase truncate leading-none">
-                {player2.name}
+                {rightName}
               </h3>
               <div className="flex items-center justify-end gap-2 mt-1 text-[11px] font-mono-num text-slate-400">
-                <span>OVR <strong className="text-amber-400">{t2.avgOvr}</strong></span>
+                <span>OVR <strong className="text-amber-400">{rightTeam.avgOvr}</strong></span>
                 <span className="text-slate-700">|</span>
-                <span>CHEM <strong className="text-cyan-400">{t2.chem}</strong></span>
+                <span>CHEM <strong className="text-cyan-400">{rightTeam.chem}</strong></span>
               </div>
             </div>
             <span className="w-1.5 h-9 bg-rose-500 rounded-sm shrink-0" />
@@ -702,34 +862,38 @@ export default function HeadToHeadMatch({
       {/* LIVE MATCH STATS STRIP */}
       {matchPhase !== 'lobby' && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-3">
-          <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-2">
-            <div className="flex items-center justify-between font-mono-num text-xs font-bold mb-1">
-              <span className="text-emerald-400">{poss1}%</span>
+          <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-2 relative overflow-hidden">
+            {renderHalfGlow(possLead)}
+            <div className="flex items-center justify-between font-mono-num text-xs font-bold mb-1 relative z-10">
+              <span className="text-emerald-400">{leftPoss}%</span>
               <span className="font-display text-[10px] text-slate-400 uppercase tracking-wider">Kiểm soát bóng</span>
-              <span className="text-rose-400">{poss2}%</span>
+              <span className="text-rose-400">{rightPoss}%</span>
             </div>
-            <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden flex">
-              <div className="bg-emerald-400 h-full transition-all duration-300" style={{ width: `${poss1}%` }} />
-              <div className="bg-rose-500 h-full transition-all duration-300" style={{ width: `${poss2}%` }} />
+            <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden flex relative z-10">
+              <div className="bg-emerald-400 h-full transition-all duration-300" style={{ width: `${leftPoss}%` }} />
+              <div className="bg-rose-500 h-full transition-all duration-300" style={{ width: `${rightPoss}%` }} />
             </div>
           </div>
 
-          <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-2 flex items-center justify-between font-mono-num text-xs font-bold">
-            <span className="text-emerald-400 text-sm">{shots1}</span>
-            <span className="font-display text-[10px] text-slate-400 uppercase tracking-wider">Cơ hội / Dứt điểm</span>
-            <span className="text-rose-400 text-sm">{shots2}</span>
+          <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-2 flex items-center justify-between font-mono-num text-xs font-bold relative overflow-hidden">
+            {renderHalfGlow(shotsLead)}
+            <span className="text-emerald-400 text-sm relative z-10">{leftShots}</span>
+            <span className="font-display text-[10px] text-slate-400 uppercase tracking-wider relative z-10">Cơ hội / Dứt điểm</span>
+            <span className="text-rose-400 text-sm relative z-10">{rightShots}</span>
           </div>
 
-          <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-2 flex items-center justify-between font-mono-num text-xs font-bold">
-            <span className="text-emerald-400 text-sm">{saves1}</span>
-            <span className="font-display text-[10px] text-slate-400 uppercase tracking-wider">Cứu thua & Cản phá</span>
-            <span className="text-rose-400 text-sm">{saves2}</span>
+          <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-2 flex items-center justify-between font-mono-num text-xs font-bold relative overflow-hidden">
+            {renderHalfGlow(savesLead)}
+            <span className="text-emerald-400 text-sm relative z-10">{leftSaves}</span>
+            <span className="font-display text-[10px] text-slate-400 uppercase tracking-wider relative z-10">Cứu thua & Cản phá</span>
+            <span className="text-rose-400 text-sm relative z-10">{rightSaves}</span>
           </div>
 
-          <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-2 flex items-center justify-between font-mono-num text-xs font-bold">
-            <span className="text-emerald-400 text-sm">{cards1}</span>
-            <span className="font-display text-[10px] text-slate-400 uppercase tracking-wider">Thẻ phạt</span>
-            <span className="text-rose-400 text-sm">{cards2}</span>
+          <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-2 flex items-center justify-between font-mono-num text-xs font-bold relative overflow-hidden">
+            {renderHalfGlow(cardsLead)}
+            <span className="text-emerald-400 text-sm relative z-10">{leftCards}</span>
+            <span className="font-display text-[10px] text-slate-400 uppercase tracking-wider relative z-10">Thẻ phạt</span>
+            <span className="text-rose-400 text-sm relative z-10">{rightCards}</span>
           </div>
         </div>
       )}
@@ -746,34 +910,33 @@ export default function HeadToHeadMatch({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
             <div className={`p-4 rounded-lg border transition-colors ${
-              p1Ready ? 'bg-emerald-950/35 border-emerald-400' : 'bg-slate-900/80 border-emerald-500/35'
+              leftReady ? 'bg-emerald-950/35 border-emerald-400' : 'bg-slate-900/80 border-emerald-500/35'
             }`}>
-              <h4 className="font-display text-xl font-extrabold text-emerald-400 uppercase">{player1.name}</h4>
-              <p className="font-mono-num text-xs text-slate-400 mb-3">OVR {t1.avgOvr} · CHEM {t1.chem}</p>
+              <h4 className="font-display text-xl font-extrabold text-emerald-400 uppercase">{leftName}</h4>
+              <p className="font-mono-num text-xs text-slate-400 mb-3">OVR {leftTeam.avgOvr} · CHEM {leftTeam.chem}</p>
               <button
-                onClick={handleToggleP1Ready}
-                disabled={onlineState.isConnected && onlineState.role !== 'host'}
-                className={`w-full py-2.5 px-4 rounded font-display text-sm font-extrabold uppercase tracking-wider transition-colors ${
-                  p1Ready ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
-                } ${onlineState.isConnected && onlineState.role !== 'host' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                onClick={onLeftReady}
+                className={`w-full py-2.5 px-4 rounded font-display text-sm font-extrabold uppercase tracking-wider transition-colors cursor-pointer ${
+                  leftReady ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+                }`}
               >
-                {p1Ready ? 'ĐÃ SẴN SÀNG' : 'SẴN SÀNG'}
+                {leftReady ? 'ĐÃ SẴN SÀNG' : 'SẴN SÀNG'}
               </button>
             </div>
 
             <div className={`p-4 rounded-lg border-2 transition-colors ${
-              p2Ready ? 'bg-rose-950/35 border-rose-500' : 'bg-slate-900/80 border-rose-500/60'
+              rightReady ? 'bg-rose-950/35 border-rose-500' : 'bg-slate-900/80 border-rose-500/60'
             }`}>
-              <h4 className="font-display text-xl font-extrabold text-rose-400 uppercase">{player2.name}</h4>
-              <p className="font-mono-num text-xs text-slate-400 mb-3">OVR {t2.avgOvr} · CHEM {t2.chem}</p>
+              <h4 className="font-display text-xl font-extrabold text-rose-400 uppercase">{rightName}</h4>
+              <p className="font-mono-num text-xs text-slate-400 mb-3">OVR {rightTeam.avgOvr} · CHEM {rightTeam.chem}</p>
               <button
-                onClick={handleToggleP2Ready}
-                disabled={onlineState.isConnected && onlineState.role !== 'guest'}
+                onClick={onRightReady}
+                disabled={onlineState.isConnected}
                 className={`w-full py-2.5 px-4 rounded font-display text-sm font-extrabold uppercase tracking-wider transition-colors ${
-                  p2Ready ? 'bg-rose-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
-                } ${onlineState.isConnected && onlineState.role !== 'guest' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  rightReady ? 'bg-rose-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+                } ${onlineState.isConnected ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
               >
-                {p2Ready ? (isP2Bot ? 'BOT ĐÃ SẴN SÀNG' : 'ĐÃ SẴN SÀNG') : 'SẴN SÀNG'}
+                {rightReady ? (isP2Bot ? 'BOT ĐÃ SẴN SÀNG' : 'ĐÃ SẴN SÀNG') : 'SẴN SÀNG'}
               </button>
             </div>
           </div>
@@ -795,15 +958,20 @@ export default function HeadToHeadMatch({
       {/* STAGE 3: FIXED-HEIGHT 2-COLUMN EVENT STAGE (NO JUMPING / NO POP-UP) */}
       {matchPhase === 'playing' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:h-[255px] mb-3">
-          {/* LEFT BOX: TEAM 1 */}
+          {/* LEFT BOX: SELF (GREEN) */}
           <div
             className={`h-full rounded-lg p-3.5 flex flex-col justify-between transition-colors duration-200 relative overflow-hidden ${
-              activeHighlight?.team === 1
-                ? 'bg-emerald-950/30 border-2 border-emerald-400'
+              activeHighlight?.team === leftTeamNum
+                ? activeHighlight?.type === 'GOAL'
+                  ? 'bg-emerald-950/35 border-2 border-amber-400 goal-gold-frame'
+                  : 'bg-emerald-950/30 border-2 border-emerald-400'
                 : 'bg-slate-950/75 border border-emerald-500/30'
             }`}
           >
-            {activeHighlight?.team === 1 ? (
+            {activeHighlight?.team === leftTeamNum && activeHighlight?.type === 'GOAL' && (
+              <div key={`left-goal-sweep-${activeHighlight.min}`} className="goal-gold-sweep" />
+            )}
+            {activeHighlight?.team === leftTeamNum ? (
               <>
                 <div className="flex items-center gap-3.5">
                   {/* Player Photo */}
@@ -840,17 +1008,22 @@ export default function HeadToHeadMatch({
                 </div>
 
                 {/* Commentary Directly Under Player Photo */}
-                <div className="mt-2.5 bg-slate-900/90 border border-emerald-500/30 rounded p-2.5 text-xs md:text-[13px] text-emerald-100 leading-relaxed flex-1 flex items-center">
-                  {activeHighlight.desc}
+                <div className="mt-2.5 bg-slate-900/90 border border-emerald-500/30 rounded p-2.5 text-xs md:text-[13px] text-emerald-100 leading-relaxed flex-1 flex flex-col justify-center gap-1 relative z-10">
+                  <span>{renderHighlightedText(activeHighlight.desc)}</span>
+                  {activeHighlight.type === 'GOAL' && activeHighlight.assistPlayer && (
+                    <span className="text-[11px] font-bold text-cyan-300">
+                      Kiến tạo: {activeHighlight.assistPlayer.name} ({activeHighlight.assistPlayer.subPos || activeHighlight.assistPlayer.position})
+                    </span>
+                  )}
                 </div>
               </>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-center px-4">
                 <div className="font-display text-sm font-bold uppercase tracking-widest text-emerald-400/80 mb-1">
-                  {player1.name}
+                  {leftName}
                 </div>
                 <p className="text-xs text-slate-500">
-                  {activeHighlight?.team === 2
+                  {activeHighlight?.team === rightTeamNum
                     ? 'Hàng phòng ngự đang tập trung cản phá đợt lên bóng của đối thủ.'
                     : `Phút ${currentMinute}' — Đang kiểm soát bóng và tìm khoảng trống...`}
                 </p>
@@ -858,15 +1031,20 @@ export default function HeadToHeadMatch({
             )}
           </div>
 
-          {/* RIGHT BOX: TEAM 2 (OPPONENT RED BORDER) */}
+          {/* RIGHT BOX: OPPONENT (RED BORDER) */}
           <div
             className={`h-full rounded-lg p-3.5 flex flex-col justify-between transition-colors duration-200 relative overflow-hidden ${
-              activeHighlight?.team === 2
-                ? 'bg-rose-950/35 border-2 border-rose-500'
+              activeHighlight?.team === rightTeamNum
+                ? activeHighlight?.type === 'GOAL'
+                  ? 'bg-rose-950/35 border-2 border-amber-400 goal-gold-frame'
+                  : 'bg-rose-950/35 border-2 border-rose-500'
                 : 'bg-slate-950/75 border-2 border-rose-500/55'
             }`}
           >
-            {activeHighlight?.team === 2 ? (
+            {activeHighlight?.team === rightTeamNum && activeHighlight?.type === 'GOAL' && (
+              <div key={`right-goal-sweep-${activeHighlight.min}`} className="goal-gold-sweep" />
+            )}
+            {activeHighlight?.team === rightTeamNum ? (
               <>
                 <div className="flex items-center gap-3.5">
                   {/* Player Photo */}
@@ -903,17 +1081,22 @@ export default function HeadToHeadMatch({
                 </div>
 
                 {/* Commentary Directly Under Player Photo */}
-                <div className="mt-2.5 bg-slate-900/90 border border-rose-500/35 rounded p-2.5 text-xs md:text-[13px] text-rose-100 leading-relaxed flex-1 flex items-center">
-                  {activeHighlight.desc}
+                <div className="mt-2.5 bg-slate-900/90 border border-rose-500/35 rounded p-2.5 text-xs md:text-[13px] text-rose-100 leading-relaxed flex-1 flex flex-col justify-center gap-1 relative z-10">
+                  <span>{renderHighlightedText(activeHighlight.desc)}</span>
+                  {activeHighlight.type === 'GOAL' && activeHighlight.assistPlayer && (
+                    <span className="text-[11px] font-bold text-cyan-300">
+                      Kiến tạo: {activeHighlight.assistPlayer.name} ({activeHighlight.assistPlayer.subPos || activeHighlight.assistPlayer.position})
+                    </span>
+                  )}
                 </div>
               </>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-center px-4">
                 <div className="font-display text-sm font-bold uppercase tracking-widest text-rose-400/80 mb-1">
-                  {player2.name}
+                  {rightName}
                 </div>
                 <p className="text-xs text-slate-500">
-                  {activeHighlight?.team === 1
+                  {activeHighlight?.team === leftTeamNum
                     ? 'Hàng phòng ngự đang lùi sâu chống đỡ sức ép từ đối phương.'
                     : `Phút ${currentMinute}' — Đang giữ cự ly đội hình và chờ thời cơ phản công...`}
                 </p>
@@ -928,19 +1111,19 @@ export default function HeadToHeadMatch({
         <div className="bg-slate-950/85 border border-amber-500/40 rounded-lg p-3.5 text-center mb-3 md:h-[255px] flex flex-col justify-between">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
             <span className="font-display text-sm font-extrabold uppercase tracking-wider text-amber-400">
-              LOẠT SÚT LUÂN LƯU 11M (HÒA {liveScore1}-{liveScore2})
+              LOẠT SÚT LUÂN LƯU 11M (HÒA {leftScore}-{rightScore})
             </span>
             <span className="font-mono-num text-sm font-extrabold px-2.5 py-0.5 rounded bg-slate-900 border border-amber-500/50 text-white">
-              PEN: <span className="text-emerald-400">{penScore1}</span> - <span className="text-rose-400">{penScore2}</span>
+              PEN: <span className="text-emerald-400">{leftPen}</span> - <span className="text-rose-400">{rightPen}</span>
             </span>
           </div>
 
           {/* Penalty Shootout Round-by-Round Tracker */}
           <div className="grid grid-cols-2 gap-3 my-1.5">
             <div className="bg-slate-900/90 border border-emerald-500/30 rounded px-3 py-1.5 flex items-center justify-between gap-2">
-              <span className="font-display text-xs font-extrabold text-emerald-400 uppercase truncate">{player1.name}</span>
+              <span className="font-display text-xs font-extrabold text-emerald-400 uppercase truncate">{leftName}</span>
               <div className="flex items-center gap-1.5">
-                {penaltyKicks.filter(k => k.team === 1).map((k, i) => {
+                {penaltyKicks.filter(k => k.team === leftTeamNum).map((k, i) => {
                   const globalIdx = penaltyKicks.indexOf(k);
                   const revealed = globalIdx <= currentPenIndex;
                   return (
@@ -964,7 +1147,7 @@ export default function HeadToHeadMatch({
 
             <div className="bg-slate-900/90 border-2 border-rose-500/60 rounded px-3 py-1.5 flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
-                {penaltyKicks.filter(k => k.team === 2).map((k, i) => {
+                {penaltyKicks.filter(k => k.team === rightTeamNum).map((k, i) => {
                   const globalIdx = penaltyKicks.indexOf(k);
                   const revealed = globalIdx <= currentPenIndex;
                   return (
@@ -984,7 +1167,7 @@ export default function HeadToHeadMatch({
                   );
                 })}
               </div>
-              <span className="font-display text-xs font-extrabold text-rose-400 uppercase truncate">{player2.name}</span>
+              <span className="font-display text-xs font-extrabold text-rose-400 uppercase truncate">{rightName}</span>
             </div>
           </div>
 
@@ -999,7 +1182,7 @@ export default function HeadToHeadMatch({
                   </div>
                   <div className="text-left min-w-0">
                     <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
-                      Lượt {penaltyKicks[currentPenIndex].round} · {penaltyKicks[currentPenIndex].team === 1 ? player1.name : player2.name}
+                      Lượt {penaltyKicks[currentPenIndex].round} · {penaltyKicks[currentPenIndex].team === leftTeamNum ? leftName : rightName}
                     </div>
                     <div className="text-sm font-extrabold text-white truncate">{penaltyKicks[currentPenIndex].shooter?.name}</div>
                     <div className="text-[10px] text-slate-400">Người sút ({penaltyKicks[currentPenIndex].shooter?.ovr} OVR)</div>
@@ -1042,21 +1225,21 @@ export default function HeadToHeadMatch({
           <div className="text-center">
             <div className="inline-flex items-center gap-2 font-display text-2xl md:text-3xl font-extrabold text-amber-300 uppercase tracking-wide">
               <Trophy className="w-6 h-6 text-amber-400" />
-              CHÚC MỪNG {winner.name} VÔ ĐỊCH SIÊU CÚP 1V1
+              CHÚC MỪNG {winnerDisplayName} VÔ ĐỊCH SIÊU CÚP 1V1
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 mt-3 text-xs">
             <div className="bg-slate-950/75 border border-emerald-500/30 rounded px-3 py-2 flex items-center justify-between gap-2">
-              <span className="font-display font-bold text-emerald-400 uppercase shrink-0">Ghi bàn ({player1.name})</span>
+              <span className="font-display font-bold text-emerald-400 uppercase shrink-0">Ghi bàn ({leftName})</span>
               <span className="text-slate-200 font-medium text-right">
-                {goalsT1.length > 0 ? goalsT1.map(g => `${g.player?.name} (${g.min}')`).join(', ') : 'Không có bàn thắng'}
+                {leftGoals.length > 0 ? leftGoals.map(g => `${g.player?.name} (${g.min}')`).join(', ') : 'Không có bàn thắng'}
               </span>
             </div>
             <div className="bg-slate-950/75 border border-rose-500/40 rounded px-3 py-2 flex items-center justify-between gap-2">
-              <span className="font-display font-bold text-rose-400 uppercase shrink-0">Ghi bàn ({player2.name})</span>
+              <span className="font-display font-bold text-rose-400 uppercase shrink-0">Ghi bàn ({rightName})</span>
               <span className="text-slate-200 font-medium text-right">
-                {goalsT2.length > 0 ? goalsT2.map(g => `${g.player?.name} (${g.min}')`).join(', ') : 'Không có bàn thắng'}
+                {rightGoals.length > 0 ? rightGoals.map(g => `${g.player?.name} (${g.min}')`).join(', ') : 'Không có bàn thắng'}
               </span>
             </div>
           </div>
@@ -1114,7 +1297,7 @@ export default function HeadToHeadMatch({
                 <div
                   key={idx}
                   className={`px-3 py-2 rounded text-xs flex items-start gap-2.5 border ${
-                    ev.team === 1
+                    ev.team === leftTeamNum
                       ? 'bg-emerald-950/25 text-emerald-100 border-emerald-500/35'
                       : 'bg-rose-950/25 text-rose-100 border-rose-500/45'
                   }`}
@@ -1124,12 +1307,13 @@ export default function HeadToHeadMatch({
                   </span>
                   <span className={`font-display text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-sm shrink-0 mt-0.5 ${
                     ev.type === 'GOAL' ? 'bg-amber-400 text-slate-950' :
+                    ev.type === 'PENALTY_SAVED' ? 'bg-amber-400 text-slate-950' :
                     ev.type === 'RED_CARD' ? 'bg-rose-600 text-white' :
                     ev.type === 'CARD' ? 'bg-yellow-400 text-slate-950' :
                     ev.type === 'PENALTY' ? 'bg-cyan-500 text-slate-950' :
                     'bg-slate-800 text-slate-200'
                   }`}>
-                    {EVENT_LABELS[ev.type] || ev.type}
+                    {ev.isPenalty ? 'PENALTY 11M' : (EVENT_LABELS[ev.type] || ev.type)}
                   </span>
                   <div className="min-w-0 flex-1 leading-snug">
                     <span className="font-bold text-white">{ev.player?.name}</span>
@@ -1139,7 +1323,12 @@ export default function HeadToHeadMatch({
                       </span>
                     )}
                     <span className="mx-1.5 text-slate-500">—</span>
-                    <span className="text-slate-300">{ev.desc}</span>
+                    <span className="text-slate-300">{renderHighlightedText(ev.desc)}</span>
+                    {ev.type === 'GOAL' && ev.assistPlayer && (
+                      <div className="text-[11px] font-semibold text-cyan-300 mt-0.5">
+                        Kiến tạo: {ev.assistPlayer.name} ({ev.assistPlayer.subPos || ev.assistPlayer.position})
+                      </div>
+                    )}
                   </div>
                 </div>
               ))
