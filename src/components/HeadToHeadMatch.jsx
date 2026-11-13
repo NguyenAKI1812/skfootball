@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Trophy, RotateCcw } from 'lucide-react';
 import { sounds } from '../utils/sound';
 import { calcSquadStats } from '../data/players';
+import MatchPitch2D from './MatchPitch2D';
 
 export default function HeadToHeadMatch({ 
   player1, 
@@ -14,6 +15,7 @@ export default function HeadToHeadMatch({
 }) {
   // Phase: 'lobby' (waiting ready) -> 'countdown' (3..2..1) -> 'playing' (fast clock + highlights) -> 'penalty' (if tied) -> 'finished'
   const [matchPhase, setMatchPhase] = useState('lobby');
+  const [simSpeed, setSimSpeed] = useState(1);
   const [p1Ready, setP1Ready] = useState(false);
   const [p2Ready, setP2Ready] = useState(false);
   const [countdown, setCountdown] = useState(3);
@@ -40,16 +42,33 @@ export default function HeadToHeadMatch({
   const minuteRef = useRef(0);
   minuteRef.current = currentMinute;
   const isPausedRef = useRef(false);
+  const [isHalfTime, setIsHalfTime] = useState(false);
+  const halfTimeDoneRef = useRef(false);
+  const [goalImpactActive, setGoalImpactActive] = useState(false);
+  const highlightTimersRef = useRef([]);
 
-  // 1. Calculate Team Power & Stats (including out-of-position penalties)
+  useEffect(() => {
+    return () => {
+      highlightTimersRef.current.forEach(t => clearTimeout(t));
+      highlightTimersRef.current = [];
+    };
+  }, []);
+
+  // 1. Calculate Team Power & Stats (strictly group by formation slot so GK never enters outfield event pools)
   const calcTeamInfo = (manager) => {
-    const { avgOvr, chemistry: chem, players: squadList } = calcSquadStats(manager.squad || {});
+    const squad = manager.squad || {};
+    const { avgOvr, chemistry: chem, players: squadList } = calcSquadStats(squad);
     const safeAvgOvr = squadList.length > 0 ? avgOvr : 75;
 
-    const gks = squadList.filter(p => p.position === 'GK');
-    const dfs = squadList.filter(p => p.position === 'DF');
-    const mfs = squadList.filter(p => p.position === 'MF');
-    const fws = squadList.filter(p => p.position === 'FW');
+    const gks = squad.gk ? [squad.gk] : squadList.filter(p => p.position === 'GK');
+    const dfSlots = ['lb', 'lcb', 'rcb', 'rb'].map(k => squad[k]).filter(Boolean);
+    const mfSlots = ['cdm', 'cm1', 'cm2', 'cam'].map(k => squad[k]).filter(Boolean);
+    const fwSlots = ['lw', 'st', 'rw'].map(k => squad[k]).filter(Boolean);
+
+    const outfieldFallback = squadList.filter(p => p.id !== gks[0]?.id);
+    const dfs = dfSlots.length > 0 ? dfSlots : outfieldFallback.slice(0, 4);
+    const mfs = mfSlots.length > 0 ? mfSlots : outfieldFallback.slice(4, 7);
+    const fws = fwSlots.length > 0 ? fwSlots : outfieldFallback.slice(7, 10);
 
     const atkOvr = fws.length > 0
       ? Math.round(fws.reduce((acc, p) => acc + p.ovr, 0) / fws.length)
@@ -57,16 +76,17 @@ export default function HeadToHeadMatch({
 
     // Default fallback player if squad is empty
     const dummyPlayer = { name: manager.name, ovr: safeAvgOvr, position: 'FW', club: 'FC All-Stars', nation: 'FIFA' };
+    const safeOutfield = outfieldFallback.length > 0 ? outfieldFallback : (squadList.length > 0 ? squadList : [dummyPlayer]);
 
     return { 
       squadList: squadList.length > 0 ? squadList : [dummyPlayer], 
       avgOvr: safeAvgOvr, 
       atkOvr,
       chem, 
-      gks: gks.length > 0 ? gks : squadList.slice(0, 1),
-      dfs: dfs.length > 0 ? dfs : squadList.slice(1, 5),
-      mfs: mfs.length > 0 ? mfs : squadList.slice(5, 8),
-      fws: fws.length > 0 ? fws : squadList.slice(8, 11)
+      gks: gks.length > 0 ? gks : [dummyPlayer],
+      dfs: dfs.length > 0 ? dfs : safeOutfield,
+      mfs: mfs.length > 0 ? mfs : safeOutfield,
+      fws: fws.length > 0 ? fws : safeOutfield
     };
   };
 
@@ -179,12 +199,24 @@ export default function HeadToHeadMatch({
       "THẺ VÀNG THỨ HAI · RỜI SÂN: Pha vào bóng chậm một nhịp ở khu vực trung lộ buộc trọng tài rút thẻ vàng thứ hai, đồng nghĩa với chiếc thẻ đỏ!"
     ];
 
+    const THROW_IN_TEMPLATES = [
+      "NÉM BIÊN NHANH TẠO ĐỘT BIẾN: Nhận thấy hàng thủ đối phương chưa kịp ổn định, lập tức thực hiện quả ném biên chuẩn xác dọc hành lang cánh mở ra pha tấn công mới!",
+      "NÉM BIÊN CHIẾN THUẬT: Đưa bóng vào sát đường biên dọc sau pha tranh chấp, đồng đội khống chế gọn gàng rồi chuyển hướng tấn công vào trung lộ!",
+      "ĐỔI HƯỚNG TỪ TÌNH HUỐNG NÉM BIÊN: Quả ném biên mạnh và chính xác giúp đội nhà giữ vững nhịp kiểm soát bóng bên phần sân đối phương!"
+    ];
+
+    const CORNER_TEMPLATES = [
+      "PHẠT GÓC NGUY HIỂM: Từ chấm phạt góc, quả tạt xoáy cực khó chịu hướng thẳng vào khu vực 5m50 khiến hàng phòng ngự đối phương phải vất vả giải vây!",
+      "TÌNH HUỐNG CỐ ĐỊNH TỪ CỘT CỜ GÓC: Treo bóng chuẩn xác vào vòng cấm địa tạo ra pha không chiến nghẹt thở trước khung thành!",
+      "PHẠT GÓC CHIẾN THUẬT: Phối hợp đá phạt góc đầy ý đồ khuấy đảo vòng cấm trước khi bóng bật ra tuyến hai!"
+    ];
+
     const getRandomItem = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-    // Create a pool of minutes: pick 7 to 8 highlight minutes between 8' and 89'
-    const totalHighlights = Math.min(8, Math.max(6, g1 + g2 + 4));
+    // Create a pool of minutes: pick 7 to 9 highlight minutes spaced >= 7' apart
+    const totalHighlights = Math.min(9, Math.max(7, g1 + g2 + 5));
     const availableMinutes = [];
-    for (let m = 8; m <= 88; m += 4) availableMinutes.push(m);
+    for (let m = 7; m <= 85; m += 7) availableMinutes.push(m);
     // Shuffle and pick
     availableMinutes.sort(() => Math.random() - 0.5);
     const chosenMinutes = availableMinutes.slice(0, totalHighlights).sort((a, b) => a - b);
@@ -326,6 +358,21 @@ export default function HeadToHeadMatch({
       player: woodPlayer,
       desc: getRandomItem(WOODWORK_TEMPLATES)
     });
+
+    // Rare throw-in event from touchline contest (35% chance, at most 1 per match)
+    if (Math.random() < 0.35) {
+      const throwInTeam = Math.random() < 0.5 ? 1 : 2;
+      const teamPool = throwInTeam === 1 ? t1 : t2;
+      const throwInPlayer = getRandomItem([...teamPool.dfs, ...teamPool.mfs]) || teamPool.squadList[0];
+      rawEvents.push({
+        team: throwInTeam,
+        type: 'THROW_IN',
+        badgeText: 'THROW-IN · NÉM BIÊN',
+        badgeClass: 'bg-cyan-500 text-slate-950 border-cyan-300',
+        player: throwInPlayer,
+        desc: getRandomItem(THROW_IN_TEMPLATES)
+      });
+    }
 
     // Yellow Card or Red Card
     const cardTeam = Math.random() > 0.5 ? 1 : 2;
@@ -556,6 +603,8 @@ export default function HeadToHeadMatch({
     } else {
       const timer = setTimeout(() => {
         sounds.playWhistle();
+        halfTimeDoneRef.current = false;
+        setIsHalfTime(false);
         setMatchPhase('playing');
         setCurrentMinute(0);
         minuteRef.current = 0;
@@ -564,12 +613,28 @@ export default function HeadToHeadMatch({
     }
   }, [matchPhase, countdown]);
 
-  // 4. Fast Match Clock Simulation with Interrupts at Key Moments
+  // 4. Match Clock Simulation: 1st Half 45'=32.4s (720ms/min), Half-Time 3s, 2nd Half 45'=34.2s (760ms/min)
   useEffect(() => {
     if (matchPhase !== 'playing') return;
 
+    const baseTickMs = halfTimeDoneRef.current ? 760 : 720;
+    const tickMs = simSpeed === 2 ? Math.round(baseTickMs / 2) : baseTickMs;
+
     const interval = setInterval(() => {
       if (isPausedRef.current) return;
+
+      if (minuteRef.current === 45 && !halfTimeDoneRef.current) {
+        halfTimeDoneRef.current = true;
+        isPausedRef.current = true;
+        setIsHalfTime(true);
+        sounds.playWhistle();
+        setTimeout(() => {
+          setIsHalfTime(false);
+          isPausedRef.current = false;
+          sounds.playWhistle();
+        }, 3000);
+        return;
+      }
 
       const nextMin = minuteRef.current + 1;
 
@@ -577,38 +642,57 @@ export default function HeadToHeadMatch({
       const ev = eventsTimeline.find(e => e.min === nextMin);
 
       if (ev) {
-        // PAUSE CLOCK AND HIGHLIGHT EVENT!
-        isPausedRef.current = true;
+        // PLAY SYNCHRONIZED CHOREOGRAPHY WITHOUT STOPPING THE CLOCK DURING BUILDUP
+        // Clock ONLY pauses AFTER a goal is scored (for celebration + center kick-off reset)
         setCurrentMinute(nextMin);
         minuteRef.current = nextMin;
         setActiveHighlight(ev);
-        setHighlightCountdown(3);
+        setGoalImpactActive(false);
 
-        // Update score immediately if goal
-        if (ev.type === 'GOAL') {
-          if (ev.team === 1) setLiveScore1(ev.scoreAfter.s1);
-          if (ev.team === 2) setLiveScore2(ev.scoreAfter.s2);
-          sounds.playFanfare();
-        } else if (ev.type === 'SAVE') {
-          sounds.playGavel();
-        } else {
-          sounds.playTick();
-        }
+        const isGoalEv = ev.type === 'GOAL';
+        const impactDelayMs = isGoalEv ? 2200 : 1800;
+        const totalDurationMs = isGoalEv ? 6000 : 5400;
+        setHighlightCountdown(0);
 
-        // Add to completed logs
-        setCompletedEvents(prev => [ev, ...prev]);
+        // Clear any leftover highlight timers before scheduling new ones
+        highlightTimersRef.current.forEach(t => clearTimeout(t));
+        highlightTimersRef.current = [];
 
-        // Pause for 3.2 seconds for dramatic effect, then resume fast clock
-        let remain = 3;
-        const countdownTimer = setInterval(() => {
-          remain -= 1;
-          setHighlightCountdown(remain);
-          if (remain <= 0) {
-            clearInterval(countdownTimer);
-            setActiveHighlight(null);
+        // Reveal player card, commentary, completed log, stats & score ONLY after action happens on pitch
+        const impactTimer = setTimeout(() => {
+          setGoalImpactActive(true);
+          setCompletedEvents(prev => [ev, ...prev]);
+          if (isGoalEv) {
+            isPausedRef.current = true;
+            setHighlightCountdown(4);
+            for (let s = 1; s < 4; s++) {
+              const tickTimer = setTimeout(() => {
+                setHighlightCountdown(Math.max(1, 4 - s));
+              }, s * 1000);
+              highlightTimersRef.current.push(tickTimer);
+            }
+            if (ev.team === 1) setLiveScore1(ev.scoreAfter.s1);
+            if (ev.team === 2) setLiveScore2(ev.scoreAfter.s2);
+            sounds.playFanfare();
+          } else if (ev.type === 'SAVE' || ev.type === 'PENALTY_SAVED' || ev.type === 'WOODWORK') {
+            sounds.playGavel();
+          } else {
+            sounds.playTick();
+          }
+        }, impactDelayMs);
+        highlightTimersRef.current.push(impactTimer);
+
+        // Clear highlight and (if GOAL) resume match clock after celebration, center reset & >1s kickoff hold
+        const endTimer = setTimeout(() => {
+          if (isGoalEv) {
+            sounds.playWhistle();
             isPausedRef.current = false;
           }
-        }, 1000);
+          setHighlightCountdown(0);
+          setGoalImpactActive(false);
+          setActiveHighlight(null);
+        }, totalDurationMs);
+        highlightTimersRef.current.push(endTimer);
 
       } else if (nextMin >= 90) {
         // Match 90 minutes concluded!
@@ -642,10 +726,10 @@ export default function HeadToHeadMatch({
         minuteRef.current = nextMin;
         setCurrentMinute(nextMin);
       }
-    }, 200); // Match clock: 200ms per minute (10' = 2s)
+    }, tickMs);
 
     return () => clearInterval(interval);
-  }, [matchPhase, eventsTimeline]);
+  }, [matchPhase, eventsTimeline, simSpeed, isHalfTime]);
 
   // 5. Penalty Shootout Engine (If 90' Ends In A Draw)
   const startPenaltyShootout = (s1, s2) => {
@@ -713,7 +797,7 @@ export default function HeadToHeadMatch({
   const liveWave = matchPhase === 'playing'
     ? Math.sin(currentMinute * 0.42) * 5.5 + Math.cos(currentMinute * 0.21) * 3.5
     : 0;
-  const highlightBoost = activeHighlight?.team === 1 ? 4 : activeHighlight?.team === 2 ? -4 : 0;
+  const highlightBoost = 0;
   const possRamp = (matchPhase === 'finished' || matchPhase === 'penalty')
     ? 1
     : currentMinute <= 0
@@ -736,6 +820,8 @@ export default function HeadToHeadMatch({
   const EVENT_LABELS = {
     GOAL: 'BÀN THẮNG',
     ASSIST: 'KIẾN TẠO',
+    THROW_IN: 'NÉM BIÊN',
+    CORNER: 'PHẠT GÓC',
     SAVE: 'CỨU THUA',
     PENALTY_SAVED: 'CẢN PHÁ 11M',
     DEFENSE: 'CẢN PHÁ',
@@ -745,7 +831,7 @@ export default function HeadToHeadMatch({
     PENALTY: 'LUÂN LƯU 11M',
   };
 
-  const HIGHLIGHT_KEYWORDS_REGEX = /(góc chữ A|góc chết|góc cao|góc xa|góc gần|góc cực hẹp|tung lưới|tung nóc lưới|không thể cản phá|siêu phẩm|cứu thua|cản phá|phản xạ|trên vạch vôi|cứu bàn thua mười mươi|xà ngang|cột dọc|khung gỗ|thẻ vàng|thẻ đỏ|truất quyền thi đấu|chấm phạt đền 11m|chấm phạt đền|chấm 11m|phạt đền 11m|phạt đền|penalty|Panenka|đánh lừa thủ môn|vô-lê|tiki-taka|trivela|xe đạp chổng ngược|cứa lòng|sút xa|đánh đầu|xoạc bóng|chọc khe|đối mặt|bàn thắng|cận thành|ngăn cản bàn thắng|đánh bại)/gi;
+  const HIGHLIGHT_KEYWORDS_REGEX = /(góc chữ A|góc chết|góc cao|góc xa|góc gần|góc cực hẹp|tung lưới|tung nóc lưới|không thể cản phá|siêu phẩm|cứu thua|cản phá|phản xạ|trên vạch vôi|cứu bàn thua mười mươi|xà ngang|cột dọc|khung gỗ|thẻ vàng|thẻ đỏ|truất quyền thi đấu|chấm phạt đền 11m|chấm phạt đền|chấm 11m|phạt đền 11m|phạt đền|penalty|Panenka|đánh lừa thủ môn|vô-lê|tiki-taka|trivela|xe đạp chổng ngược|cứa lòng|sút xa|đánh đầu|xoạc bóng|chọc khe|đối mặt|bàn thắng|cận thành|ngăn cản bàn thắng|đánh bại|ném biên|đường biên dọc|phạt góc|cột cờ góc)/gi;
 
   const renderHighlightedText = (text) => {
     if (!text) return null;
@@ -844,11 +930,11 @@ export default function HeadToHeadMatch({
   const cardsLead = leftCards > rightCards ? 'left' : rightCards > leftCards ? 'right' : 'tie';
 
   return (
-    <div className="broadcast-panel border border-slate-800 rounded-xl p-4 max-w-6xl mx-auto w-full">
+    <div className="broadcast-panel border border-slate-800 rounded-xl p-4 max-w-[1660px] mx-auto w-full">
       {/* Compact Broadcast Scoreboard */}
       <div className="bg-slate-950/90 border border-slate-800 rounded-lg px-4 py-2.5 mb-3 relative overflow-hidden">
         {renderHalfGlow(scoreLead, true)}
-        {activeHighlight?.type === 'GOAL' && activeHighlight?.team === leftTeamNum && (
+        {goalImpactActive && activeHighlight?.type === 'GOAL' && activeHighlight?.team === leftTeamNum && (
           <div
             key={`sb-gold-left-${activeHighlight.min}`}
             className="absolute inset-y-0 left-0 w-1/2 overflow-hidden pointer-events-none z-20"
@@ -856,7 +942,7 @@ export default function HeadToHeadMatch({
             <div className="goal-gold-sweep" />
           </div>
         )}
-        {activeHighlight?.type === 'GOAL' && activeHighlight?.team === rightTeamNum && (
+        {goalImpactActive && activeHighlight?.type === 'GOAL' && activeHighlight?.team === rightTeamNum && (
           <div
             key={`sb-gold-right-${activeHighlight.min}`}
             className="absolute inset-y-0 right-0 w-1/2 overflow-hidden pointer-events-none z-20"
@@ -884,23 +970,24 @@ export default function HeadToHeadMatch({
           {/* Center Clock & Score */}
           <div className="col-span-4 text-center flex flex-col items-center">
             <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-sm bg-slate-900 border border-slate-800 mb-1">
-              <span className={`w-1.5 h-1.5 rounded-full ${matchPhase === 'playing' ? (activeHighlight ? 'bg-amber-400' : 'bg-emerald-400') : 'bg-slate-500'}`} />
+              <span className={`w-1.5 h-1.5 rounded-full ${matchPhase === 'playing' ? (activeHighlight || isHalfTime ? 'bg-amber-400' : 'bg-emerald-400') : 'bg-slate-500'}`} />
               <span className="font-mono-num text-[11px] font-bold tracking-wider text-slate-200 uppercase">
                 {matchPhase === 'lobby' ? 'FINAL · READY CHECK' :
                  matchPhase === 'countdown' ? `KICKOFF IN ${countdown}` :
                  matchPhase === 'penalty' ? 'PENALTY SHOOTOUT' :
                  matchPhase === 'finished' ? 'FULL TIME · 90\'' :
-                 activeHighlight ? `PHÚT ${currentMinute}' · TẠM DỪNG (${highlightCountdown}s)` :
-                 `PHÚT ${currentMinute}'`}
+                 isHalfTime ? 'NGHỈ GIỮA HIỆP · 45\' (3s)' :
+                 goalImpactActive && activeHighlight?.type === 'GOAL' ? `${currentMinute <= 45 ? 'HIỆP 1' : 'HIỆP 2'} · PHÚT ${currentMinute}' · ⚽ VÀOOO! (${highlightCountdown}s)` :
+                 `${currentMinute <= 45 ? 'HIỆP 1' : 'HIỆP 2'} · PHÚT ${currentMinute}'`}
               </span>
             </div>
 
             <div className="font-mono-num text-4xl md:text-5xl font-extrabold tracking-tight text-white flex items-center gap-3 leading-none">
-              <span className={activeHighlight?.team === leftTeamNum && activeHighlight?.type === 'GOAL' ? 'text-emerald-400' : 'text-white'}>
+              <span className={goalImpactActive && activeHighlight?.team === leftTeamNum && activeHighlight?.type === 'GOAL' ? 'text-emerald-400' : 'text-white'}>
                 {leftScore}
               </span>
               <span className="text-slate-600 text-2xl font-normal">-</span>
-              <span className={activeHighlight?.team === rightTeamNum && activeHighlight?.type === 'GOAL' ? 'text-rose-400' : 'text-white'}>
+              <span className={goalImpactActive && activeHighlight?.team === rightTeamNum && activeHighlight?.type === 'GOAL' ? 'text-rose-400' : 'text-white'}>
                 {rightScore}
               </span>
             </div>
@@ -1020,172 +1107,226 @@ export default function HeadToHeadMatch({
         </div>
       )}
 
-      {/* STAGE 2: PRE-MATCH COUNTDOWN */}
-      {matchPhase === 'countdown' && (
-        <div className="h-[255px] flex flex-col items-center justify-center bg-slate-950/70 border border-slate-800 rounded-lg mb-3">
-          <span className="font-display text-xs font-bold uppercase tracking-[0.2em] text-amber-400 mb-2">
-            TRẬN ĐẤU SẮP BẮT ĐẦU
-          </span>
-          <div className="font-mono-num text-7xl font-extrabold text-white">
-            {countdown}
+      {/* STAGE 5: FINISHED CELEBRATION (Full Width Above Pitch/Timeline) */}
+      {matchPhase === 'finished' && winner && (
+        <div className="mb-3 p-4 rounded-lg bg-gradient-to-r from-amber-950/45 via-slate-900 to-amber-950/45 border border-amber-500/70">
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 font-display text-2xl md:text-3xl font-extrabold text-amber-300 uppercase tracking-wide">
+              <Trophy className="w-6 h-6 text-amber-400" />
+              CHÚC MỪNG {winnerDisplayName} VÔ ĐỊCH SIÊU CÚP 1V1
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 mt-3 text-xs">
+            <div className="bg-slate-950/75 border border-emerald-500/30 rounded px-3 py-2 flex items-center justify-between gap-2">
+              <span className="font-display font-bold text-emerald-400 uppercase shrink-0">Ghi bàn ({leftName})</span>
+              <span className="text-slate-200 font-medium text-right">
+                {leftGoals.length > 0 ? leftGoals.map(g => `${g.player?.name} (${g.min}')`).join(', ') : 'Không có bàn thắng'}
+              </span>
+            </div>
+            <div className="bg-slate-950/75 border border-rose-500/40 rounded px-3 py-2 flex items-center justify-between gap-2">
+              <span className="font-display font-bold text-rose-400 uppercase shrink-0">Ghi bàn ({rightName})</span>
+              <span className="text-slate-200 font-medium text-right">
+                {rightGoals.length > 0 ? rightGoals.map(g => `${g.player?.name} (${g.min}')`).join(', ') : 'Không có bàn thắng'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-4 mt-3">
+            {mvp && (
+              <div className="inline-flex items-center gap-3.5 bg-gradient-to-r from-amber-950/75 via-slate-950/95 to-amber-950/60 border-2 border-amber-400/80 rounded-xl px-4 py-2.5 text-left shadow-[0_0_22px_rgba(251,191,36,0.28)]">
+                <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-amber-400 bg-slate-800 shrink-0 shadow-[0_0_12px_rgba(251,191,36,0.35)]">
+                  {mvp.photo ? (
+                    <img src={mvp.photo} alt={mvp.name} className="w-full h-full object-cover object-top" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center font-display text-xl font-extrabold text-amber-300">
+                      {mvp.ovr}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <span className="inline-block text-[10px] font-extrabold uppercase tracking-widest text-slate-950 bg-amber-400 px-2 py-0.5 rounded-sm mb-1">
+                    ★ MAN OF THE MATCH · MVP
+                  </span>
+                  <div className="font-display text-base md:text-lg font-extrabold text-white uppercase tracking-wide leading-tight">
+                    {mvp.name} · <span className="text-amber-300 font-mono-num">{mvp.ovr} OVR</span>
+                  </div>
+                  <div className="text-xs text-slate-300 font-semibold mt-0.5">
+                    {mvp.subPos || mvp.position} · {mvp.club}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={onRestart}
+              className="py-2.5 px-6 rounded font-display text-sm font-extrabold uppercase tracking-wider bg-amber-400 hover:bg-amber-300 text-slate-950 inline-flex items-center gap-2 transition-colors cursor-pointer"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Giải Đấu Mới
+            </button>
           </div>
         </div>
       )}
 
-      {/* STAGE 3: FIXED-HEIGHT 2-COLUMN EVENT STAGE (NO JUMPING / NO POP-UP) */}
-      {matchPhase === 'playing' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:h-[255px] mb-3">
-          {/* LEFT BOX: SELF (GREEN) */}
-          <div
-            className={`h-full rounded-lg p-3.5 flex flex-col justify-between transition-colors duration-200 relative overflow-hidden ${
-              activeHighlight?.team === leftTeamNum
-                ? activeHighlight?.type === 'GOAL'
-                  ? 'bg-emerald-950/35 border-2 border-amber-400 goal-gold-frame'
-                  : 'bg-emerald-950/30 border-2 border-emerald-400'
-                : 'bg-slate-950/75 border border-emerald-500/30'
-            }`}
-          >
-            {activeHighlight?.team === leftTeamNum && activeHighlight?.type === 'GOAL' && (
-              <div key={`left-goal-sweep-${activeHighlight.min}`} className="goal-gold-sweep" />
-            )}
-            {activeHighlight?.team === leftTeamNum ? (
-              <>
-                <div className="flex items-center gap-3.5">
-                  {/* Player Photo */}
-                  <div className="w-24 h-24 rounded-lg overflow-hidden border border-amber-400/80 bg-slate-800 shrink-0">
-                    {activeHighlight.player.photo ? (
-                      <img
-                        src={activeHighlight.player.photo}
-                        alt={activeHighlight.player.name}
-                        className="w-full h-full object-cover object-top"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center font-display text-2xl font-extrabold text-amber-400">
-                        {activeHighlight.player.ovr}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Player Meta & Event Tag */}
-                  <div className="min-w-0 flex-1">
-                    <span className={`inline-block font-display text-[11px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-sm border mb-1 ${activeHighlight.badgeClass}`}>
-                      {activeHighlight.badgeText}
-                    </span>
-                    <h4 className="font-display text-2xl font-extrabold text-white uppercase tracking-wide truncate leading-none">
-                      {activeHighlight.player.name}
-                    </h4>
-                    <div className="text-[11px] text-slate-300 font-semibold mt-1 uppercase tracking-wider">
-                      <span className="text-amber-400 font-mono-num font-bold">{activeHighlight.player.ovr} OVR</span>
-                      <span className="mx-1.5 text-slate-600">·</span>
-                      <span className="text-emerald-400 font-bold">{activeHighlight.player.subPos || activeHighlight.player.position}</span>
-                      <span className="mx-1.5 text-slate-600">·</span>
-                      <span className="text-slate-400">{activeHighlight.player.club}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Commentary Directly Under Player Photo */}
-                <div className="mt-2.5 bg-slate-900/90 border border-emerald-500/30 rounded p-2.5 text-xs md:text-[13px] text-emerald-100 leading-relaxed flex-1 flex flex-col justify-center gap-1 relative z-10">
-                  <span>{renderHighlightedText(activeHighlight.desc)}</span>
-                  {activeHighlight.type === 'GOAL' && activeHighlight.assistPlayer && (
-                    <span className="text-[11px] font-bold text-cyan-300">
-                      Kiến tạo: {activeHighlight.assistPlayer.name} ({activeHighlight.assistPlayer.subPos || activeHighlight.assistPlayer.position})
-                    </span>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center px-4">
-                <div className="font-display text-sm font-bold uppercase tracking-widest text-emerald-400/80 mb-1">
-                  {leftName}
-                </div>
-                <p className="text-xs text-slate-500">
-                  {activeHighlight?.team === rightTeamNum
-                    ? 'Hàng phòng ngự đang tập trung cản phá đợt lên bóng của đối thủ.'
-                    : `Phút ${currentMinute}' — Đang kiểm soát bóng và tìm khoảng trống...`}
-                </p>
-              </div>
-            )}
+      {/* WIDE 2-COLUMN BROADCAST MATCH STAGE */}
+      {matchPhase !== 'lobby' && (
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-3.5 items-stretch">
+          {/* LEFT COLUMN: SPACIOUS 2D/2.5D PITCH */}
+          <div className="xl:col-span-7 2xl:col-span-8 flex">
+            <MatchPitch2D
+              leftSquad={isGuestView ? (player2.squad || {}) : (player1.squad || {})}
+              rightSquad={isGuestView ? (player1.squad || {}) : (player2.squad || {})}
+              leftTeamNum={leftTeamNum}
+              rightTeamNum={rightTeamNum}
+              leftName={leftName}
+              rightName={rightName}
+              currentMinute={currentMinute}
+              matchPhase={matchPhase}
+              leftPoss={leftPoss}
+              activeHighlight={activeHighlight}
+              eventsTimeline={eventsTimeline}
+              penaltyKick={matchPhase === 'penalty' && currentPenIndex >= 0 ? penaltyKicks[currentPenIndex] : null}
+              isHalfTime={isHalfTime}
+              simSpeed={simSpeed}
+              onToggleSpeed={() => setSimSpeed(s => (s === 1 ? 2 : 1))}
+            />
           </div>
 
-          {/* RIGHT BOX: OPPONENT (RED BORDER) */}
-          <div
-            className={`h-full rounded-lg p-3.5 flex flex-col justify-between transition-colors duration-200 relative overflow-hidden ${
-              activeHighlight?.team === rightTeamNum
-                ? activeHighlight?.type === 'GOAL'
-                  ? 'bg-rose-950/35 border-2 border-amber-400 goal-gold-frame'
-                  : 'bg-rose-950/35 border-2 border-rose-500'
-                : 'bg-slate-950/75 border-2 border-rose-500/55'
-            }`}
-          >
-            {activeHighlight?.team === rightTeamNum && activeHighlight?.type === 'GOAL' && (
-              <div key={`right-goal-sweep-${activeHighlight.min}`} className="goal-gold-sweep" />
-            )}
-            {activeHighlight?.team === rightTeamNum ? (
-              <>
-                <div className="flex items-center gap-3.5">
-                  {/* Player Photo */}
-                  <div className="w-24 h-24 rounded-lg overflow-hidden border border-rose-400/80 bg-slate-800 shrink-0">
-                    {activeHighlight.player.photo ? (
-                      <img
-                        src={activeHighlight.player.photo}
-                        alt={activeHighlight.player.name}
-                        className="w-full h-full object-cover object-top"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center font-display text-2xl font-extrabold text-rose-400">
-                        {activeHighlight.player.ovr}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Player Meta & Event Tag */}
-                  <div className="min-w-0 flex-1">
-                    <span className={`inline-block font-display text-[11px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-sm border mb-1 ${activeHighlight.badgeClass}`}>
-                      {activeHighlight.badgeText}
-                    </span>
-                    <h4 className="font-display text-2xl font-extrabold text-white uppercase tracking-wide truncate leading-none">
-                      {activeHighlight.player.name}
-                    </h4>
-                    <div className="text-[11px] text-slate-300 font-semibold mt-1 uppercase tracking-wider">
-                      <span className="text-amber-400 font-mono-num font-bold">{activeHighlight.player.ovr} OVR</span>
-                      <span className="mx-1.5 text-slate-600">·</span>
-                      <span className="text-rose-400 font-bold">{activeHighlight.player.subPos || activeHighlight.player.position}</span>
-                      <span className="mx-1.5 text-slate-600">·</span>
-                      <span className="text-slate-400">{activeHighlight.player.club}</span>
-                    </div>
-                  </div>
+          {/* RIGHT COLUMN: ACTIVE HIGHLIGHT + MATCH TIMELINE */}
+          <div className="xl:col-span-5 2xl:col-span-4 flex flex-col gap-3">
+            {/* STAGE 2: PRE-MATCH COUNTDOWN */}
+            {matchPhase === 'countdown' && (
+              <div className="h-[240px] flex flex-col items-center justify-center bg-slate-950/70 border border-slate-800 rounded-lg">
+                <span className="font-display text-xs font-bold uppercase tracking-[0.2em] text-amber-400 mb-2">
+                  TRẬN ĐẤU SẮP BẮT ĐẦU
+                </span>
+                <div className="font-mono-num text-7xl font-extrabold text-white">
+                  {countdown}
                 </div>
-
-                {/* Commentary Directly Under Player Photo */}
-                <div className="mt-2.5 bg-slate-900/90 border border-rose-500/35 rounded p-2.5 text-xs md:text-[13px] text-rose-100 leading-relaxed flex-1 flex flex-col justify-center gap-1 relative z-10">
-                  <span>{renderHighlightedText(activeHighlight.desc)}</span>
-                  {activeHighlight.type === 'GOAL' && activeHighlight.assistPlayer && (
-                    <span className="text-[11px] font-bold text-cyan-300">
-                      Kiến tạo: {activeHighlight.assistPlayer.name} ({activeHighlight.assistPlayer.subPos || activeHighlight.assistPlayer.position})
-                    </span>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center px-4">
-                <div className="font-display text-sm font-bold uppercase tracking-widest text-rose-400/80 mb-1">
-                  {rightName}
-                </div>
-                <p className="text-xs text-slate-500">
-                  {activeHighlight?.team === leftTeamNum
-                    ? 'Hàng phòng ngự đang lùi sâu chống đỡ sức ép từ đối phương.'
-                    : `Phút ${currentMinute}' — Đang giữ cự ly đội hình và chờ thời cơ phản công...`}
-                </p>
               </div>
             )}
-          </div>
-        </div>
-      )}
 
-      {/* STAGE 4: PENALTY SHOOTOUT */}
-      {matchPhase === 'penalty' && (
-        <div className="bg-slate-950/85 border border-amber-500/40 rounded-lg p-3.5 text-center mb-3 md:h-[255px] flex flex-col justify-between">
+            {/* STAGE 3: SINGLE FULL-WIDTH TEAM-COLORED EVENT STAGE */}
+            {matchPhase === 'playing' && (() => {
+              const revealedHighlight = goalImpactActive ? activeHighlight : null;
+              const isSelfHighlight = revealedHighlight?.team === leftTeamNum;
+              const isOppHighlight = revealedHighlight?.team === rightTeamNum;
+              const isGoalHighlight = revealedHighlight?.type === 'GOAL';
+
+              const containerTheme = revealedHighlight
+                ? isSelfHighlight
+                  ? isGoalHighlight
+                    ? 'bg-emerald-950/40 border-2 border-emerald-400 ring-2 ring-amber-400/70 goal-gold-frame'
+                    : 'bg-emerald-950/35 border-2 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.2)]'
+                  : isGoalHighlight
+                  ? 'bg-rose-950/40 border-2 border-rose-500 ring-2 ring-amber-400/70 goal-gold-frame'
+                  : 'bg-rose-950/35 border-2 border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.2)]'
+                : activeHighlight
+                ? 'bg-slate-950/90 border-2 border-amber-400/55 shadow-[0_0_18px_rgba(251,191,36,0.12)]'
+                : leftPoss >= 50
+                ? 'bg-slate-950/80 border-2 border-emerald-500/35'
+                : 'bg-slate-950/80 border-2 border-rose-500/35';
+
+              return (
+                <div className={`min-h-[235px] rounded-xl p-4 flex flex-col justify-between transition-colors duration-200 relative overflow-hidden ${containerTheme}`}>
+                  {isGoalHighlight && (
+                    <div key={`goal-sweep-${revealedHighlight.min}-${revealedHighlight.team}`} className="goal-gold-sweep" />
+                  )}
+
+                  {revealedHighlight ? (
+                    <>
+                      <div className="flex items-center gap-3.5 relative z-10">
+                        {/* Player Photo */}
+                        <div className={`w-20 h-20 rounded-lg overflow-hidden border-2 bg-slate-800 shrink-0 ${
+                          isSelfHighlight ? 'border-emerald-400' : 'border-rose-400'
+                        }`}>
+                          {revealedHighlight.player.photo ? (
+                            <img
+                              src={revealedHighlight.player.photo}
+                              alt={revealedHighlight.player.name}
+                              className="w-full h-full object-cover object-top"
+                            />
+                          ) : (
+                            <div className={`w-full h-full flex items-center justify-center font-display text-2xl font-extrabold ${
+                              isSelfHighlight ? 'text-emerald-400' : 'text-rose-400'
+                            }`}>
+                              {revealedHighlight.player.ovr}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Player Meta & Event Tag */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <span className={`inline-block font-display text-[11px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-sm border ${revealedHighlight.badgeClass}`}>
+                              {revealedHighlight.badgeText}
+                            </span>
+                            <span className={`text-[11px] font-display font-extrabold uppercase tracking-wider ${
+                              isSelfHighlight ? 'text-emerald-400' : 'text-rose-400'
+                            }`}>
+                              · {isSelfHighlight ? leftName : rightName}
+                            </span>
+                          </div>
+                          <h4 className="font-display text-2xl font-extrabold text-white uppercase tracking-wide truncate leading-none">
+                            {revealedHighlight.player.name}
+                          </h4>
+                          <div className="text-[11px] text-slate-300 font-semibold mt-1 uppercase tracking-wider">
+                            <span className="text-amber-400 font-mono-num font-bold">{revealedHighlight.player.ovr} OVR</span>
+                            <span className="mx-1.5 text-slate-600">·</span>
+                            <span className={`font-bold ${isSelfHighlight ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {revealedHighlight.player.subPos || revealedHighlight.player.position}
+                            </span>
+                            <span className="mx-1.5 text-slate-600">·</span>
+                            <span className="text-slate-400">{revealedHighlight.player.club}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Full-Width Commentary Box */}
+                      <div className={`mt-3 bg-slate-900/90 border rounded-lg p-3 text-xs md:text-sm leading-relaxed flex-1 flex flex-col justify-center gap-1 relative z-10 ${
+                        isSelfHighlight ? 'border-emerald-500/35 text-emerald-100' : 'border-rose-500/40 text-rose-100'
+                      }`}>
+                        <span>{renderHighlightedText(revealedHighlight.desc)}</span>
+                        {revealedHighlight.type === 'GOAL' && revealedHighlight.assistPlayer && (
+                          <span className="text-xs font-bold text-cyan-300">
+                            Kiến tạo: {revealedHighlight.assistPlayer.name} ({revealedHighlight.assistPlayer.subPos || revealedHighlight.assistPlayer.position})
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-6">
+                      <div className="flex items-center gap-2 font-display text-sm font-extrabold uppercase tracking-widest mb-1.5">
+                        <span className="text-emerald-400">{leftName}</span>
+                        <span className="text-slate-600">vs</span>
+                        <span className="text-rose-400">{rightName}</span>
+                      </div>
+                      <div className="font-mono-num text-xs font-bold uppercase tracking-wider text-amber-300 mb-1">
+                        {isHalfTime
+                          ? 'NGHỈ GIỮA HIỆP · 45\''
+                          : activeHighlight
+                          ? `⚡ ĐANG TRIỂN KHAI TÌNH HUỐNG · PHÚT ${currentMinute}'`
+                          : `${currentMinute <= 45 ? 'HIỆP 1' : 'HIỆP 2'} · PHÚT ${currentMinute}'`}
+                      </div>
+                      <p className="text-xs text-slate-400 max-w-md">
+                        {isHalfTime
+                          ? 'Hai đội tạm nghỉ giữa hiệp trước khi bước vào 45 phút hiệp 2.'
+                          : activeHighlight
+                          ? 'Cầu thủ đang phối hợp áp sát trên sân, chờ xem kết quả pha bóng...'
+                          : leftPoss >= 50
+                          ? `${leftName} đang kiểm soát thế trận (${leftPoss}%) và tổ chức phối hợp tìm cơ hội dứt điểm...`
+                          : `${rightName} đang cầm nhịp (${rightPoss}%) và đẩy cao đội hình gây sức ép...`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* STAGE 4: PENALTY SHOOTOUT */}
+            {matchPhase === 'penalty' && (
+              <div className="bg-slate-950/85 border border-amber-500/40 rounded-lg p-3.5 text-center md:h-[245px] flex flex-col justify-between">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
             <span className="font-display text-sm font-extrabold uppercase tracking-wider text-amber-400">
               LOẠT SÚT LUÂN LƯU 11M (HÒA {leftScore}-{rightScore})
@@ -1296,81 +1437,18 @@ export default function HeadToHeadMatch({
         </div>
       )}
 
-      {/* STAGE 5: FINISHED CELEBRATION */}
-      {matchPhase === 'finished' && winner && (
-        <div className="mb-3 p-4 rounded-lg bg-gradient-to-r from-amber-950/45 via-slate-900 to-amber-950/45 border border-amber-500/70">
-          <div className="text-center">
-            <div className="inline-flex items-center gap-2 font-display text-2xl md:text-3xl font-extrabold text-amber-300 uppercase tracking-wide">
-              <Trophy className="w-6 h-6 text-amber-400" />
-              CHÚC MỪNG {winnerDisplayName} VÔ ĐỊCH SIÊU CÚP 1V1
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 mt-3 text-xs">
-            <div className="bg-slate-950/75 border border-emerald-500/30 rounded px-3 py-2 flex items-center justify-between gap-2">
-              <span className="font-display font-bold text-emerald-400 uppercase shrink-0">Ghi bàn ({leftName})</span>
-              <span className="text-slate-200 font-medium text-right">
-                {leftGoals.length > 0 ? leftGoals.map(g => `${g.player?.name} (${g.min}')`).join(', ') : 'Không có bàn thắng'}
-              </span>
-            </div>
-            <div className="bg-slate-950/75 border border-rose-500/40 rounded px-3 py-2 flex items-center justify-between gap-2">
-              <span className="font-display font-bold text-rose-400 uppercase shrink-0">Ghi bàn ({rightName})</span>
-              <span className="text-slate-200 font-medium text-right">
-                {rightGoals.length > 0 ? rightGoals.map(g => `${g.player?.name} (${g.min}')`).join(', ') : 'Không có bàn thắng'}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center gap-4 mt-3">
-            {mvp && (
-              <div className="inline-flex items-center gap-3.5 bg-gradient-to-r from-amber-950/75 via-slate-950/95 to-amber-950/60 border-2 border-amber-400/80 rounded-xl px-4 py-2.5 text-left shadow-[0_0_22px_rgba(251,191,36,0.28)]">
-                <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-amber-400 bg-slate-800 shrink-0 shadow-[0_0_12px_rgba(251,191,36,0.35)]">
-                  {mvp.photo ? (
-                    <img src={mvp.photo} alt={mvp.name} className="w-full h-full object-cover object-top" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center font-display text-xl font-extrabold text-amber-300">
-                      {mvp.ovr}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <span className="inline-block text-[10px] font-extrabold uppercase tracking-widest text-slate-950 bg-amber-400 px-2 py-0.5 rounded-sm mb-1">
-                    ★ MAN OF THE MATCH · MVP
-                  </span>
-                  <div className="font-display text-base md:text-lg font-extrabold text-white uppercase tracking-wide leading-tight">
-                    {mvp.name} · <span className="text-amber-300 font-mono-num">{mvp.ovr} OVR</span>
-                  </div>
-                  <div className="text-xs text-slate-300 font-semibold mt-0.5">
-                    {mvp.subPos || mvp.position} · {mvp.club}
-                  </div>
-                </div>
+            {/* ALWAYS-VISIBLE DETAILED MATCH TIMELINE */}
+            <div className="bg-slate-950/85 rounded-lg p-3.5 border border-slate-800 flex-1 flex flex-col min-h-0">
+              <div className="flex justify-between items-center mb-2.5">
+                <span className="font-display text-xs font-bold text-slate-300 uppercase tracking-widest">
+                  MATCH TIMELINE · DIỄN BIẾN CHI TIẾT TRẬN ĐẤU
+                </span>
+                <span className="font-mono-num text-[11px] text-slate-400">
+                  {completedEvents.length} tình huống
+                </span>
               </div>
-            )}
 
-            <button
-              onClick={onRestart}
-              className="py-2.5 px-6 rounded font-display text-sm font-extrabold uppercase tracking-wider bg-amber-400 hover:bg-amber-300 text-slate-950 inline-flex items-center gap-2 transition-colors cursor-pointer"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Giải Đấu Mới
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ALWAYS-VISIBLE DETAILED MATCH TIMELINE (NO SCROLL NEEDED) */}
-      {matchPhase !== 'lobby' && (
-        <div className="bg-slate-950/85 rounded-lg p-3.5 border border-slate-800">
-          <div className="flex justify-between items-center mb-2.5">
-            <span className="font-display text-xs font-bold text-slate-300 uppercase tracking-widest">
-              MATCH TIMELINE · DIỄN BIẾN CHI TIẾT TRẬN ĐẤU
-            </span>
-            <span className="font-mono-num text-[11px] text-slate-400">
-              {completedEvents.length} tình huống
-            </span>
-          </div>
-
-          <div className="space-y-2 h-[230px] overflow-y-auto pr-1">
+              <div className="space-y-2 flex-1 min-h-[220px] max-h-[280px] overflow-y-auto pr-1">
             {completedEvents.length === 0 ? (
               <div className="h-full flex items-center justify-center text-xs text-slate-500">
                 Trận đấu đang diễn ra — Các tình huống đáng chú ý sẽ cập nhật trực tiếp tại đây...
@@ -1416,6 +1494,8 @@ export default function HeadToHeadMatch({
                 </div>
               ))
             )}
+          </div>
+        </div>
           </div>
         </div>
       )}
