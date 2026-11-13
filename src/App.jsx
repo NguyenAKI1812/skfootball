@@ -12,6 +12,7 @@ import HeadToHeadMatch from './components/HeadToHeadMatch';
 import ProfileModal from './components/ProfileModal';
 import OnlineRoomModal from './components/OnlineRoomModal';
 import GuideModal from './components/GuideModal';
+import ChatBox from './components/ChatBox';
 import { onlineSync } from './utils/onlineSync';
 import { getSavedAccount } from './utils/accountService';
 import { sounds } from './utils/sound';
@@ -26,14 +27,41 @@ import {
   HelpCircle
 } from 'lucide-react';
 
+const SESSION_STORAGE_KEY = 'skfootball_active_session_v1';
+
+function loadSavedSession() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const params = new URLSearchParams(window.location.search);
+    const urlRoom = params.get('room')?.trim().toUpperCase();
+    // If user opened a different room invite link, don't restore old room session
+    if (urlRoom && parsed.onlineRoomCode && parsed.onlineRoomCode !== urlRoom) {
+      return null;
+    }
+    if (params.get('test') === 'match') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
+  const initialSessionRef = useRef(undefined);
+  if (initialSessionRef.current === undefined) {
+    initialSessionRef.current = loadSavedSession();
+  }
+  const saved = initialSessionRef.current;
+
   const [isMuted, setIsMuted] = useState(false);
-  const [gameState, setGameState] = useState('lobby'); // 'lobby', 'auction', 'round_result', 'tactics', 'final_match'
-  const [p1AuctionReady, setP1AuctionReady] = useState(false);
-  const [p2AuctionReady, setP2AuctionReady] = useState(false);
-  const [tacticsTimeLeft, setTacticsTimeLeft] = useState(30);
-  const [p1TacticsReady, setP1TacticsReady] = useState(false);
-  const [p2TacticsReady, setP2TacticsReady] = useState(false);
+  const [gameState, setGameState] = useState(() => saved?.gameState || 'lobby'); // 'lobby', 'auction', 'round_result', 'tactics', 'final_match'
+  const [p1AuctionReady, setP1AuctionReady] = useState(() => Boolean(saved?.p1AuctionReady));
+  const [p2AuctionReady, setP2AuctionReady] = useState(() => Boolean(saved?.p2AuctionReady));
+  const [tacticsTimeLeft, setTacticsTimeLeft] = useState(() => typeof saved?.tacticsTimeLeft === 'number' ? saved.tacticsTimeLeft : 30);
+  const [p1TacticsReady, setP1TacticsReady] = useState(() => Boolean(saved?.p1TacticsReady));
+  const [p2TacticsReady, setP2TacticsReady] = useState(() => Boolean(saved?.p2TacticsReady));
 
   // Modals
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -49,11 +77,11 @@ export default function App() {
   const [onlineAccount, setOnlineAccount] = useState(() => getSavedAccount());
 
   // 11-Round Fixed Schedule: 1 GK, 4 DF, 3 MF, 3 FW
-  const [schedule, setSchedule] = useState(() => generateDraftSchedule());
-  const [currentRoundIdx, setCurrentRoundIdx] = useState(0);
+  const [schedule, setSchedule] = useState(() => saved?.schedule || generateDraftSchedule());
+  const [currentRoundIdx, setCurrentRoundIdx] = useState(() => typeof saved?.currentRoundIdx === 'number' ? saved.currentRoundIdx : 0);
 
   // Player 1 & Player 2 Managers (Customizable Names & Avatars)
-  const [player1, setPlayer1] = useState({
+  const [player1, setPlayer1] = useState(() => saved?.player1 || {
     id: 'p1',
     name: 'HLV 1 (Bạn)',
     avatar: '🟢',
@@ -62,7 +90,7 @@ export default function App() {
     squad: {}
   });
 
-  const [player2, setPlayer2] = useState({
+  const [player2, setPlayer2] = useState(() => saved?.player2 || {
     id: 'p2',
     name: 'HLV 2 (Đối thủ)',
     avatar: '🔴',
@@ -71,27 +99,32 @@ export default function App() {
     squad: {}
   });
 
-  const [isP2Bot, setIsP2Bot] = useState(false);
+  const [isP2Bot, setIsP2Bot] = useState(() => Boolean(saved?.isP2Bot));
 
   // Auction State within current round
-  const [currentTier1Player, setCurrentTier1Player] = useState(null);
-  const [usedPlayerIds, setUsedPlayerIds] = useState(new Set());
-  const usedPlayerIdsRef = useRef(new Set());
-  const [timeLeft, setTimeLeft] = useState(10);
-  const [roundEndsAt, setRoundEndsAt] = useState(null);
-  const roundEndsAtRef = useRef(null);
+  const [currentTier1Player, setCurrentTier1Player] = useState(() => saved?.currentTier1Player || null);
+  const [usedPlayerIds, setUsedPlayerIds] = useState(() => new Set(saved?.usedIds || []));
+  const usedPlayerIdsRef = useRef(new Set(saved?.usedIds || []));
+  const [timeLeft, setTimeLeft] = useState(() =>
+    saved?.roundEndsAt ? Math.max(0, Math.ceil((saved.roundEndsAt - Date.now()) / 1000)) : 10
+  );
+  const [roundEndsAt, setRoundEndsAt] = useState(() => saved?.roundEndsAt || null);
+  const roundEndsAtRef = useRef(saved?.roundEndsAt || null);
   const timerPausedUntilRef = useRef(0);
   const lastTickSecondRef = useRef(null);
-  const [currentBid, setCurrentBid] = useState(0);
-  const topBidRef = useRef(0);
-  const [highestBidder, setHighestBidder] = useState(null);
-  const leaderIdRef = useRef(null);
-  const [bidHistory, setBidHistory] = useState([]);
-  const [p1Passed, setP1Passed] = useState(false);
-  const [p2Passed, setP2Passed] = useState(false);
-  const [currentTurn, setCurrentTurn] = useState('p1');
-  const currentTurnRef = useRef('p1');
-  const [isAuctionActive, setIsAuctionActive] = useState(true);
+  const [currentBid, setCurrentBid] = useState(() => typeof saved?.currentBid === 'number' ? saved.currentBid : 0);
+  const topBidRef = useRef(typeof saved?.currentBid === 'number' ? saved.currentBid : 0);
+  const [highestBidder, setHighestBidder] = useState(() => {
+    if (!saved?.highestBidderId) return null;
+    return saved.highestBidderId === 'p1' ? (saved.player1 || null) : (saved.player2 || null);
+  });
+  const leaderIdRef = useRef(saved?.highestBidderId || null);
+  const [bidHistory, setBidHistory] = useState(() => saved?.bidHistory || []);
+  const [p1Passed, setP1Passed] = useState(() => Boolean(saved?.p1Passed));
+  const [p2Passed, setP2Passed] = useState(() => Boolean(saved?.p2Passed));
+  const [currentTurn, setCurrentTurn] = useState(() => saved?.currentTurn || 'p1');
+  const currentTurnRef = useRef(saved?.currentTurn || 'p1');
+  const [isAuctionActive, setIsAuctionActive] = useState(() => typeof saved?.isAuctionActive === 'boolean' ? saved.isAuctionActive : true);
 
   const setAuctionDeadline = (endsAt) => {
     roundEndsAtRef.current = endsAt;
@@ -109,13 +142,14 @@ export default function App() {
   currentTurnRef.current = currentTurn;
 
   // Round Result State
-  const [roundWinnerInfo, setRoundWinnerInfo] = useState(null);
-  const [roundLoserInfo, setRoundLoserInfo] = useState(null);
-  const [roundTier1, setRoundTier1] = useState(null);
-  const [roundTier2, setRoundTier2] = useState(null);
-  const [p1Candidates, setP1Candidates] = useState([]);
-  const [p2Candidates, setP2Candidates] = useState([]);
+  const [roundWinnerInfo, setRoundWinnerInfo] = useState(() => saved?.roundWinnerInfo || null);
+  const [roundLoserInfo, setRoundLoserInfo] = useState(() => saved?.roundLoserInfo || null);
+  const [roundTier1, setRoundTier1] = useState(() => saved?.roundTier1 || null);
+  const [roundTier2, setRoundTier2] = useState(() => saved?.roundTier2 || null);
+  const [p1Candidates, setP1Candidates] = useState(() => saved?.p1Candidates || []);
+  const [p2Candidates, setP2Candidates] = useState(() => saved?.p2Candidates || []);
   const [matchRemoteMsg, setMatchRemoteMsg] = useState(null);
+  const [chatMessages, setChatMessages] = useState(() => saved?.chatMessages || []);
 
   const currentRoundInfo = schedule[currentRoundIdx];
 
@@ -171,8 +205,95 @@ export default function App() {
     });
   };
 
-  // Initialize first round
+  // Persist active session so page reload (F5) keeps match progress and reconnects Online
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const onlineRole = onlineState.role || onlineState.pendingRole || null;
+      const onlineRoomCode = onlineState.roomCode || onlineState.pendingRoomCode || null;
+      const payload = {
+        onlineRole,
+        onlineRoomCode,
+        gameState,
+        isP2Bot,
+        schedule,
+        currentRoundIdx,
+        currentTier1Player,
+        usedIds: Array.from(usedPlayerIdsRef.current),
+        player1,
+        player2,
+        p1AuctionReady,
+        p2AuctionReady,
+        p1TacticsReady,
+        p2TacticsReady,
+        tacticsTimeLeft,
+        currentBid,
+        roundEndsAt: roundEndsAtRef.current,
+        highestBidderId: highestBidder?.id || null,
+        bidHistory,
+        p1Passed,
+        p2Passed,
+        currentTurn: currentTurnRef.current,
+        isAuctionActive,
+        roundWinnerInfo,
+        roundLoserInfo,
+        roundTier1,
+        roundTier2,
+        p1Candidates,
+        p2Candidates,
+        chatMessages
+      };
+      window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      // ignore quota/private mode errors
+    }
+  }, [
+    onlineState.role,
+    onlineState.roomCode,
+    onlineState.pendingRole,
+    onlineState.pendingRoomCode,
+    gameState,
+    isP2Bot,
+    schedule,
+    currentRoundIdx,
+    currentTier1Player,
+    usedPlayerIds,
+    player1,
+    player2,
+    p1AuctionReady,
+    p2AuctionReady,
+    p1TacticsReady,
+    p2TacticsReady,
+    tacticsTimeLeft,
+    currentBid,
+    roundEndsAt,
+    highestBidder,
+    bidHistory,
+    p1Passed,
+    p2Passed,
+    currentTurn,
+    isAuctionActive,
+    roundWinnerInfo,
+    roundLoserInfo,
+    roundTier1,
+    roundTier2,
+    p1Candidates,
+    p2Candidates,
+    chatMessages
+  ]);
+
+  // Initialize first round or restore & reconnect saved session
+  useEffect(() => {
+    if (saved && saved.currentTier1Player) {
+      // Restored from sessionStorage: keep progress and auto-reconnect if previously in an online room
+      if (saved.onlineRole === 'host' && saved.onlineRoomCode) {
+        handleHostOnlineRoom(saved.onlineRoomCode, true);
+      } else if (saved.onlineRole === 'guest' && saved.onlineRoomCode) {
+        handleJoinOnlineRoom(saved.onlineRoomCode, true);
+      }
+      return;
+    }
+
     const cat = schedule[0].category;
     const excluded = buildExcludedIds();
     const p = selectPlayerForCategory(TIER_1_PLAYERS, cat, excluded);
@@ -214,6 +335,7 @@ export default function App() {
 
   // Online message receiver dispatcher (ref avoids stale closures in PeerJS callback)
   const remoteHandlerRef = useRef(null);
+  const sendFullSyncStateRef = useRef(null);
 
   const sendFullSyncState = () => {
     onlineSync.send({
@@ -238,9 +360,18 @@ export default function App() {
       p1Passed,
       p2Passed,
       currentTurn: currentTurnRef.current,
-      isAuctionActive
+      isAuctionActive,
+      roundWinnerInfo,
+      roundLoserInfo,
+      roundTier1,
+      roundTier2,
+      p1Candidates,
+      p2Candidates,
+      chatMessages
     });
   };
+
+  sendFullSyncStateRef.current = sendFullSyncState;
 
   const handleRemoteMessage = (msg) => {
     if (!msg || !msg.type) return;
@@ -286,11 +417,18 @@ export default function App() {
         if (Array.isArray(msg.bidHistory)) setBidHistory(msg.bidHistory);
         if (typeof msg.p1Passed === 'boolean') setP1Passed(msg.p1Passed);
         if (typeof msg.p2Passed === 'boolean') setP2Passed(msg.p2Passed);
-        if (msg.currentTurn) {
+        if (typeof msg.currentTurn === 'string' && msg.currentTurn) {
           currentTurnRef.current = msg.currentTurn;
           setCurrentTurn(msg.currentTurn);
         }
         if (typeof msg.isAuctionActive === 'boolean') setIsAuctionActive(msg.isAuctionActive);
+        if ('roundWinnerInfo' in msg) setRoundWinnerInfo(msg.roundWinnerInfo);
+        if ('roundLoserInfo' in msg) setRoundLoserInfo(msg.roundLoserInfo);
+        if ('roundTier1' in msg) setRoundTier1(msg.roundTier1);
+        if ('roundTier2' in msg) setRoundTier2(msg.roundTier2);
+        if (Array.isArray(msg.p1Candidates)) setP1Candidates(msg.p1Candidates);
+        if (Array.isArray(msg.p2Candidates)) setP2Candidates(msg.p2Candidates);
+        if (Array.isArray(msg.chatMessages)) setChatMessages(msg.chatMessages);
       }
     } else if (msg.type === 'ROUND_START') {
       if (msg.currentTurn) {
@@ -352,6 +490,17 @@ export default function App() {
       if (msg.playerRole === 'p2') handleP2Swap(msg.slotA, msg.slotB, false);
     } else if (msg.type.startsWith('MATCH_')) {
       setMatchRemoteMsg(msg);
+    } else if (msg.type === 'CHAT_MSG') {
+      setChatMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [...prev, {
+          id: msg.id,
+          senderId: msg.senderId,
+          senderName: msg.senderName,
+          text: msg.text,
+          timestamp: msg.timestamp
+        }];
+      });
     } else if (msg.type === 'RESTART') {
       handleRestart(false, msg.newSchedule, msg.firstT1);
     }
@@ -375,9 +524,9 @@ export default function App() {
   };
 
   // Online Room Handlers
-  const handleHostOnlineRoom = (code) => {
+  const handleHostOnlineRoom = (code, isReconnect = false) => {
     const cleanCode = code.trim().toUpperCase();
-    if (onlineAccount?.displayName) {
+    if (!isReconnect && onlineAccount?.displayName) {
       setPlayer1(p => ({ ...p, name: onlineAccount.displayName }));
     }
     setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: 'host', pendingRoomCode: cleanCode });
@@ -386,16 +535,16 @@ export default function App() {
       ({ role, roomCode }) => {
         setOnlineState({ isConnected: true, role, roomCode, pendingRole: null, pendingRoomCode: null });
         setIsP2Bot(false); // disable bot in online multiplayer
-        setTimeout(() => sendFullSyncState(), 250);
+        setTimeout(() => sendFullSyncStateRef.current?.(), 250);
       },
       (msg) => remoteHandlerRef.current?.(msg),
       () => setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: null, pendingRoomCode: null })
     );
   };
 
-  const handleJoinOnlineRoom = (code) => {
+  const handleJoinOnlineRoom = (code, isReconnect = false) => {
     const cleanCode = code.trim().toUpperCase();
-    if (onlineAccount?.displayName) {
+    if (!isReconnect && onlineAccount?.displayName) {
       setPlayer2(p => ({ ...p, name: onlineAccount.displayName }));
     }
     setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: 'guest', pendingRoomCode: cleanCode });
@@ -419,6 +568,7 @@ export default function App() {
   const handleDisconnectOnline = () => {
     onlineSync.disconnect();
     setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: null, pendingRoomCode: null });
+    setChatMessages([]);
   };
 
   // Start Round 1 only when BOTH players are ready
@@ -864,10 +1014,35 @@ export default function App() {
     setP1TacticsReady(false);
     setP2TacticsReady(isP2Bot);
     setIsAuctionActive(false);
+    setChatMessages([]);
     setGameState('lobby');
 
     if (broadcast && onlineState.isConnected) {
       onlineSync.send({ type: 'RESTART', newSchedule, firstT1 });
+    }
+  };
+
+  const handleSendChatMessage = (text) => {
+    const trimmed = text?.trim();
+    if (!trimmed) return;
+    const selfId = onlineState.isConnected && onlineState.role === 'guest' ? 'p2' : 'p1';
+    const rawSelfName = selfId === 'p2' ? player2.name : player1.name;
+    const cleanName = (rawSelfName || 'HLV')
+      .replace(/\s*\(Bạn\)\s*$/i, '')
+      .replace(/\s*\(Đối thủ\)\s*$/i, '')
+      .trim();
+
+    const chatMsg = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      senderId: selfId,
+      senderName: cleanName,
+      text: trimmed,
+      timestamp: Date.now()
+    };
+
+    setChatMessages((prev) => [...prev, chatMsg]);
+    if (onlineState.isConnected) {
+      onlineSync.send({ type: 'CHAT_MSG', ...chatMsg });
     }
   };
 
@@ -1023,6 +1198,13 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      {/* Top Chat Strip: Self Chat Button + Latest Message (Left) | Opponent Latest Message (Right) */}
+      <ChatBox
+        messages={chatMessages}
+        selfId={isGuestView ? 'p2' : 'p1'}
+        onSendMessage={handleSendChatMessage}
+      />
 
       {/* Main Content Area: Centered Vertically on Desktop */}
       <main className="flex-1 p-3.5 max-w-[1700px] mx-auto w-full flex flex-col justify-center relative z-10">

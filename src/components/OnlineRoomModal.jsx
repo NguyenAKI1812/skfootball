@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Globe, Copy, Check, X, Wifi, ArrowRight, Loader2, Radio, UserPlus, LogIn, Edit3, LogOut } from 'lucide-react';
 import { isSupabaseConfigured } from '../utils/supabaseClient';
 import { registerAccount, loginAccount, updateAccountDisplayName, logoutAccount } from '../utils/accountService';
@@ -114,6 +114,21 @@ export default function OnlineRoomModal({
 
   const isWaitingHost = !onlineState.isConnected && onlineState.pendingRole === 'host';
   const isJoiningGuest = !onlineState.isConnected && onlineState.pendingRole === 'guest';
+
+  const [justMatched, setJustMatched] = useState(false);
+  const prevConnectedRef = useRef(onlineState.isConnected);
+
+  useEffect(() => {
+    if (!prevConnectedRef.current && onlineState.isConnected) {
+      setJustMatched(true);
+      const timer = setTimeout(() => {
+        onClose?.();
+      }, 1500);
+      prevConnectedRef.current = true;
+      return () => clearTimeout(timer);
+    }
+    prevConnectedRef.current = onlineState.isConnected;
+  }, [onlineState.isConnected, onClose]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
@@ -308,9 +323,10 @@ export default function OnlineRoomModal({
 
             {/* Connected Banner if already live */}
             {onlineState.isConnected ? (
-              <div className="bg-slate-950/80 border-2 border-emerald-500/60 rounded-2xl p-5 text-center my-3">
+              <div className="bg-slate-950/80 border-2 border-emerald-500/60 rounded-2xl p-5 text-center my-3 shadow-[0_0_24px_rgba(16,185,129,0.2)]">
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-black mb-2">
-                  <Wifi className="w-3.5 h-3.5" /> ĐÃ KẾT NỐI ONLINE THÀNH CÔNG!
+                  <Wifi className="w-3.5 h-3.5" />
+                  {justMatched ? 'GHÉP PHÒNG THÀNH CÔNG!' : 'ĐÃ KẾT NỐI ONLINE THÀNH CÔNG!'}
                 </div>
                 <div className="text-sm font-bold text-slate-300">
                   Mã phòng: <strong className="text-amber-400 font-mono text-base">{onlineState.roomCode}</strong>
@@ -318,12 +334,19 @@ export default function OnlineRoomModal({
                 <div className="text-xs text-slate-400 mt-1">
                   Bạn đang điều khiển: <strong className="text-emerald-400 uppercase">{account.displayName} (Bạn - Xanh)</strong>
                 </div>
-                <button
-                  onClick={onDisconnect}
-                  className="mt-4 px-4 py-2 rounded-xl text-xs font-bold bg-red-950/60 text-red-400 border border-red-800 hover:bg-red-900/50 transition-all cursor-pointer"
-                >
-                  Rời Phòng / Ngắt Kết Nối
-                </button>
+                {justMatched ? (
+                  <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-300">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Đang tự động đóng bảng để bắt đầu...
+                  </div>
+                ) : (
+                  <button
+                    onClick={onDisconnect}
+                    className="mt-4 px-4 py-2 rounded-xl text-xs font-bold bg-red-950/60 text-red-400 border border-red-800 hover:bg-red-900/50 transition-all cursor-pointer"
+                  >
+                    Rời Phòng / Ngắt Kết Nối
+                  </button>
+                )}
               </div>
             ) : (
               <div>

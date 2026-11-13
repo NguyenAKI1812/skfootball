@@ -73,21 +73,35 @@ export default function HeadToHeadMatch({
   const t1 = calcTeamInfo(player1);
   const t2 = calcTeamInfo(player2);
 
-  // 2. Generate Rich Commentary Match Events (with matchday luck variance + attack bonus)
+  // 2. Generate Rich Commentary Match Events (OVR + CHEM heavily drive outcome, with realistic variance)
   const generateMatchScript = () => {
-    const power1 = t1.avgOvr * 0.7 + t1.chem * 0.3;
-    const power2 = t2.avgOvr * 0.7 + t2.chem * 0.3;
-    const cappedDiff = Math.max(-0.85, Math.min(0.85, (power1 - power2) * 0.06));
-    const atkBonus1 = Math.max(-0.2, Math.min(0.45, (t1.atkOvr - 82) * 0.03));
-    const atkBonus2 = Math.max(-0.2, Math.min(0.45, (t2.atkOvr - 82) * 0.03));
-    const luck1 = (Math.random() - 0.5) * 1.4;
-    const luck2 = (Math.random() - 0.5) * 1.4;
+    const power1 = t1.avgOvr * 0.65 + t1.chem * 0.35;
+    const power2 = t2.avgOvr * 0.65 + t2.chem * 0.35;
+    const powerDiff = power1 - power2;
 
-    let g1 = Math.max(0, Math.round(Math.random() * 2.6 + cappedDiff + atkBonus1 + luck1 + (Math.random() > 0.45 ? 1 : 0)));
-    let g2 = Math.max(0, Math.round(Math.random() * 2.6 - cappedDiff + atkBonus2 + luck2 + (Math.random() > 0.45 ? 1 : 0)));
+    // Strong team advantage scales meaningfully with OVR + CHEM gap
+    const diffBonus = Math.max(-1.85, Math.min(1.85, powerDiff * 0.14));
+    const atkBonus1 = Math.max(-0.3, Math.min(0.5, (t1.atkOvr - 83) * 0.04));
+    const atkBonus2 = Math.max(-0.3, Math.min(0.5, (t2.atkOvr - 83) * 0.04));
+
+    // Bell-curve luck (sum of two randoms centered at 0) prevents extreme random blowouts
+    const luck1 = ((Math.random() + Math.random()) / 2 - 0.5) * 1.5;
+    const luck2 = ((Math.random() + Math.random()) / 2 - 0.5) * 1.5;
+
+    let g1 = Math.max(0, Math.round(1.35 + diffBonus + atkBonus1 + luck1 + (Math.random() > 0.6 ? 1 : 0)));
+    let g2 = Math.max(0, Math.round(1.35 - diffBonus + atkBonus2 + luck2 + (Math.random() > 0.6 ? 1 : 0)));
+
+    // Guard against unrealistic heavy losses when one team is clearly superior in OVR & CHEM
+    if (powerDiff >= 5) {
+      if (g2 > g1 + 1) g2 = g1 + (Math.random() < 0.25 ? 1 : 0);
+      if (powerDiff >= 8 && g2 > g1) g2 = g1;
+    } else if (powerDiff <= -5) {
+      if (g1 > g2 + 1) g1 = g2 + (Math.random() < 0.25 ? 1 : 0);
+      if (powerDiff <= -8 && g1 > g2) g1 = g2;
+    }
 
     // Ensure at least 1 goal total for entertainment
-    if (g1 === 0 && g2 === 0 && Math.random() > 0.4) {
+    if (g1 === 0 && g2 === 0 && Math.random() > 0.35) {
       if (power1 >= power2) g1 = 1; else g2 = 1;
     }
 
@@ -186,9 +200,30 @@ export default function HeadToHeadMatch({
       return getRandomItem(pool) || null;
     };
 
+    const pickWeightedScorer = (teamObj) => {
+      const candidates = [...teamObj.fws, ...teamObj.mfs].filter(Boolean);
+      if (candidates.length === 0) return teamObj.squadList[0];
+
+      // Tier 1 superstars score much more frequently than Tier 2 role players; FW > MF
+      const weighted = candidates.map((p) => {
+        const isTier1 = p.tier === 1 || (p.ovr && p.ovr >= 88);
+        const isFw = p.position === 'FW';
+        const weight = isTier1 ? (isFw ? 6 : 4) : (isFw ? 1.4 : 0.8);
+        return { p, weight };
+      });
+
+      const totalWeight = weighted.reduce((sum, item) => sum + item.weight, 0);
+      let roll = Math.random() * totalWeight;
+      for (const item of weighted) {
+        roll -= item.weight;
+        if (roll <= 0) return item.p;
+      }
+      return weighted[0].p;
+    };
+
     // Goals for P1 (including occasional in-match Penalty Goal)
     for (let i = 0; i < g1; i++) {
-      const scorer = getRandomItem([...t1.fws, ...t1.mfs]) || t1.squadList[0];
+      const scorer = pickWeightedScorer(t1);
       const isPenGoal = Math.random() < 0.22;
       const assistPlayer = isPenGoal ? null : pickAssistPlayer(t1, scorer);
       rawEvents.push({
@@ -207,7 +242,7 @@ export default function HeadToHeadMatch({
 
     // Goals for P2 (including occasional in-match Penalty Goal)
     for (let i = 0; i < g2; i++) {
-      const scorer = getRandomItem([...t2.fws, ...t2.mfs]) || t2.squadList[0];
+      const scorer = pickWeightedScorer(t2);
       const isPenGoal = Math.random() < 0.22;
       const assistPlayer = isPenGoal ? null : pickAssistPlayer(t2, scorer);
       rawEvents.push({
@@ -309,16 +344,28 @@ export default function HeadToHeadMatch({
       desc: getRandomItem(isRedCard ? RED_CARD_TEMPLATES : CARD_TEMPLATES)
     });
 
-    // Shuffle non-goal events to mix well with goals
-    rawEvents.sort(() => Math.random() - 0.5);
+    // Always keep ALL generated goals so OVR/CHEM score outcome is never distorted,
+    // then fill remaining highlight slots with shuffled non-goal events
+    const goalEvents = rawEvents.filter(e => e.type === 'GOAL');
+    const nonGoalEvents = rawEvents.filter(e => e.type !== 'GOAL').sort(() => Math.random() - 0.5);
+    const neededNonGoals = Math.max(0, chosenMinutes.length - goalEvents.length);
+    const selectedEvents = [...goalEvents, ...nonGoalEvents.slice(0, neededNonGoals)].sort(() => Math.random() - 0.5);
 
-    // Take as many events as we have chosen minutes
+    // Ensure chosenMinutes has enough slots if there were many goals
+    while (chosenMinutes.length < selectedEvents.length && availableMinutes.length > chosenMinutes.length) {
+      const nextUnused = availableMinutes.find(m => !chosenMinutes.includes(m));
+      if (nextUnused === undefined) break;
+      chosenMinutes.push(nextUnused);
+    }
+    chosenMinutes.sort((a, b) => a - b);
+
+    // Assign minutes in chronological order and compute running score
     const finalEvents = [];
     let runningScore1 = 0;
     let runningScore2 = 0;
 
-    for (let i = 0; i < chosenMinutes.length; i++) {
-      const ev = rawEvents[i] || rawEvents[0];
+    for (let i = 0; i < Math.min(chosenMinutes.length, selectedEvents.length); i++) {
+      const ev = selectedEvents[i];
       if (ev.type === 'GOAL') {
         if (ev.team === 1) runningScore1++;
         if (ev.team === 2) runningScore2++;
@@ -330,11 +377,28 @@ export default function HeadToHeadMatch({
       });
     }
 
-    finalEvents.sort((a, b) => a.min - b.min);
-
-    // Pick MVP based on performance
-    const allPlayersWithGoals = finalEvents.filter(e => e.type === 'GOAL').map(e => e.player);
-    const mvpPlayer = allPlayersWithGoals.length > 0 ? allPlayersWithGoals[0] : (t1.squadList[0] || t2.squadList[0]);
+    // Pick MVP: player with most goals (preferring winning side), or highest OVR on winning side
+    const goalEventsFinal = finalEvents.filter(e => e.type === 'GOAL' && e.player);
+    let mvpPlayer = null;
+    if (goalEventsFinal.length > 0) {
+      const counts = new Map();
+      for (const ge of goalEventsFinal) {
+        const key = `${ge.team}-${ge.player.id || ge.player.name}`;
+        const cur = counts.get(key) || { player: ge.player, team: ge.team, goals: 0 };
+        cur.goals += 1;
+        counts.set(key, cur);
+      }
+      const leadingTeam = runningScore1 > runningScore2 ? 1 : runningScore2 > runningScore1 ? 2 : 0;
+      const ranked = Array.from(counts.values()).sort((a, b) => {
+        if (b.goals !== a.goals) return b.goals - a.goals;
+        if (leadingTeam !== 0 && a.team !== b.team) return a.team === leadingTeam ? -1 : 1;
+        return (b.player.ovr || 0) - (a.player.ovr || 0);
+      });
+      mvpPlayer = ranked[0]?.player || goalEventsFinal[0].player;
+    } else {
+      const pool = runningScore1 >= runningScore2 ? t1.squadList : t2.squadList;
+      mvpPlayer = [...pool].sort((a, b) => (b.ovr || 0) - (a.ovr || 0))[0] || t1.squadList[0];
+    }
 
     // Pre-generate penalty kicks if 90' ends in a tie so Host & Guest stay 100% synced
     let penaltyKicksScript = null;
@@ -642,9 +706,22 @@ export default function HeadToHeadMatch({
 
   const evT1 = completedEvents.filter(e => e.team === 1);
   const evT2 = completedEvents.filter(e => e.team === 2);
-  const p1Power = t1.avgOvr * 0.65 + t1.chem * 0.35 + evT1.length * 1.5;
-  const p2Power = t2.avgOvr * 0.65 + t2.chem * 0.35 + evT2.length * 1.5;
-  const poss1 = Math.min(68, Math.max(32, Math.round((p1Power / (p1Power + p2Power || 1)) * 100)));
+  const p1Power = t1.avgOvr * 0.65 + t1.chem * 0.35;
+  const p2Power = t2.avgOvr * 0.65 + t2.chem * 0.35;
+  const powerPossOffset = (p1Power - p2Power) * 0.75;
+  const eventMomentum = (evT1.length - evT2.length) * 1.4;
+  const liveWave = matchPhase === 'playing'
+    ? Math.sin(currentMinute * 0.42) * 5.5 + Math.cos(currentMinute * 0.21) * 3.5
+    : 0;
+  const highlightBoost = activeHighlight?.team === 1 ? 4 : activeHighlight?.team === 2 ? -4 : 0;
+  const possRamp = (matchPhase === 'finished' || matchPhase === 'penalty')
+    ? 1
+    : currentMinute <= 0
+    ? 0
+    : Math.min(1, currentMinute / 6);
+  const poss1 = possRamp === 0
+    ? 50
+    : Math.min(72, Math.max(28, Math.round(50 + (powerPossOffset + eventMomentum + liveWave + highlightBoost) * possRamp)));
   const poss2 = 100 - poss1;
   const shots1 = evT1.filter(e => e.type === 'GOAL' || e.type === 'WOODWORK' || e.type === 'ASSIST').length + evT2.filter(e => e.type === 'PENALTY_SAVED').length + (matchPhase === 'lobby' ? 0 : Math.floor(currentMinute / 22));
   const shots2 = evT2.filter(e => e.type === 'GOAL' || e.type === 'WOODWORK' || e.type === 'ASSIST').length + evT1.filter(e => e.type === 'PENALTY_SAVED').length + (matchPhase === 'lobby' ? 0 : Math.floor(currentMinute / 22));
@@ -1246,20 +1323,26 @@ export default function HeadToHeadMatch({
 
           <div className="flex flex-wrap items-center justify-center gap-4 mt-3">
             {mvp && (
-              <div className="inline-flex items-center gap-3 bg-slate-950/90 border border-amber-500/40 rounded-lg px-3.5 py-2 text-left">
-                <div className="w-11 h-11 rounded overflow-hidden border border-amber-400 shrink-0">
-                  {mvp.photo && (
+              <div className="inline-flex items-center gap-3.5 bg-gradient-to-r from-amber-950/75 via-slate-950/95 to-amber-950/60 border-2 border-amber-400/80 rounded-xl px-4 py-2.5 text-left shadow-[0_0_22px_rgba(251,191,36,0.28)]">
+                <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-amber-400 bg-slate-800 shrink-0 shadow-[0_0_12px_rgba(251,191,36,0.35)]">
+                  {mvp.photo ? (
                     <img src={mvp.photo} alt={mvp.name} className="w-full h-full object-cover object-top" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center font-display text-xl font-extrabold text-amber-300">
+                      {mvp.ovr}
+                    </div>
                   )}
                 </div>
                 <div>
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-amber-400 block">
-                    MAN OF THE MATCH (MVP)
+                  <span className="inline-block text-[10px] font-extrabold uppercase tracking-widest text-slate-950 bg-amber-400 px-2 py-0.5 rounded-sm mb-1">
+                    ★ MAN OF THE MATCH · MVP
                   </span>
-                  <div className="text-xs font-extrabold text-white">
-                    {mvp.name} · <span className="text-amber-400">{mvp.ovr} OVR</span>
+                  <div className="font-display text-base md:text-lg font-extrabold text-white uppercase tracking-wide leading-tight">
+                    {mvp.name} · <span className="text-amber-300 font-mono-num">{mvp.ovr} OVR</span>
                   </div>
-                  <div className="text-[10px] text-slate-400">{mvp.subPos || mvp.position} · {mvp.club}</div>
+                  <div className="text-xs text-slate-300 font-semibold mt-0.5">
+                    {mvp.subPos || mvp.position} · {mvp.club}
+                  </div>
                 </div>
               </div>
             )}

@@ -74,9 +74,11 @@ export default function MysteryBoxModal({
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
       <div className="broadcast-panel border border-slate-700 rounded-2xl max-w-4xl w-full p-5 md:p-6 text-center shadow-2xl relative overflow-hidden">
+        {/* Left-half green ambient glow to clearly identify your side */}
+        <div className="absolute inset-y-0 left-0 w-1/2 pointer-events-none bg-gradient-to-r from-emerald-500/22 via-emerald-500/8 to-transparent" />
         
         {/* Compact Banner Title */}
-        <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-4 relative z-10">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-sm bg-amber-500/20 border border-amber-500/50 text-amber-300 font-display font-bold text-sm uppercase tracking-wider">
             <Trophy className="w-4 h-4 text-amber-400" />
             {roundCategoryName?.toUpperCase()}
@@ -87,9 +89,9 @@ export default function MysteryBoxModal({
         </div>
 
         {/* Side-by-Side Result Cards: Left = Self (Green), Right = Opponent (Red) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 items-stretch text-left">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 items-stretch text-left relative z-10">
           {/* Left: Self Side (Green) */}
-          <div className="flex flex-col items-center bg-slate-950/75 p-4 rounded-xl border border-emerald-500/50">
+          <div className="flex flex-col items-center bg-gradient-to-br from-emerald-950/60 via-slate-950/85 to-slate-950/80 p-4 rounded-xl border-2 border-emerald-400/70 shadow-[0_0_24px_rgba(16,185,129,0.2)]">
             <div className="font-display text-base font-extrabold uppercase tracking-wide mb-2.5 self-start text-emerald-400">
               {selfInfo?.name}
             </div>
@@ -110,7 +112,10 @@ export default function MysteryBoxModal({
             </div>
 
             {/* Position Picker for Self */}
-            <div className="w-full mt-auto pt-2.5 border-t border-slate-800">
+            <div className="w-full mt-auto pt-2.5 border-t border-emerald-500/25">
+              <p className="text-[11px] text-emerald-300/85 text-center mb-1.5 font-medium">
+                Chọn vào vị trí bên dưới để thay đổi chỗ xếp sân
+              </p>
               <div className="flex flex-wrap gap-1.5 justify-center">
                 {selfSlots.map(slot => {
                   const isSelected = selfChosenSlot === slot.id;
