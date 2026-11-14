@@ -11,8 +11,53 @@ class OnlineSyncManager {
     this.onMessageCallback = null;
     this.onConnectionCallback = null;
     this.onDisconnectCallback = null;
+    this.onErrorCallback = null;
     this.broadcastChannel = null;
     this.hasNotifiedConnect = false;
+    this.connectTimeout = null;
+    this.leaveGraceTimer = null;
+    this.heartbeatTimer = null;
+  }
+
+  _clearTimers() {
+    if (this.connectTimeout) {
+      clearTimeout(this.connectTimeout);
+      this.connectTimeout = null;
+    }
+    if (this.leaveGraceTimer) {
+      clearTimeout(this.leaveGraceTimer);
+      this.leaveGraceTimer = null;
+    }
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  }
+
+  _cancelLeaveGrace() {
+    if (this.leaveGraceTimer) {
+      clearTimeout(this.leaveGraceTimer);
+      this.leaveGraceTimer = null;
+    }
+  }
+
+  _startHeartbeat() {
+    if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+    this.heartbeatTimer = setInterval(() => {
+      if (this.supabaseChannel && this.roomCode && this.role) {
+        this.send({ type: '_HEARTBEAT', role: this.role });
+      }
+    }, 3000);
+  }
+
+  _startGuestConnectTimeout() {
+    if (this.connectTimeout) clearTimeout(this.connectTimeout);
+    if (this.role !== 'guest') return;
+    this.connectTimeout = setTimeout(() => {
+      if (!this.hasNotifiedConnect && this.onErrorCallback) {
+        this.onErrorCallback('Không tìm thấy phòng hoặc chủ phòng chưa sẵn sàng. Hãy kiểm tra lại mã phòng.');
+      }
+    }, 15000);
   }
 
   getTransportMode() {
@@ -29,6 +74,9 @@ class OnlineSyncManager {
         if (event.data && event.data._roomCode && event.data._roomCode !== this.roomCode) {
           return;
         }
+        if (event.data?.type === '_HEARTBEAT' || event.data?.type === '_PEER_HELLO' || event.data?.type === '_PEER_WELCOME') {
+          return;
+        }
         if (this.onMessageCallback) {
           this.onMessageCallback(event.data);
         }
@@ -37,8 +85,14 @@ class OnlineSyncManager {
   }
 
   _notifyConnected() {
+    this._cancelLeaveGrace();
+    if (this.connectTimeout) {
+      clearTimeout(this.connectTimeout);
+      this.connectTimeout = null;
+    }
     if (this.hasNotifiedConnect) return;
     this.hasNotifiedConnect = true;
+    this._startHeartbeat();
     if (this.onConnectionCallback) {
       this.onConnectionCallback({ role: this.role, roomCode: this.roomCode });
     }
@@ -53,6 +107,7 @@ class OnlineSyncManager {
     }
 
     this.hasNotifiedConnect = false;
+    this._startGuestConnectTimeout();
     const channelName = `room:${this.roomCode}`;
 
     this.supabaseChannel = supabase.channel(channelName, {
@@ -65,6 +120,13 @@ class OnlineSyncManager {
     this.supabaseChannel
       .on('broadcast', { event: 'room_event' }, ({ payload }) => {
         if (payload && payload._roomCode && payload._roomCode !== this.roomCode) {
+          return;
+        }
+        this._cancelLeaveGrace();
+        if (payload?.type === '_HEARTBEAT') {
+          if (payload.role !== this.role) {
+            this._notifyConnected();
+          }
           return;
         }
         // Fast handshake over Broadcast so joining doesn't stall on presence sync
@@ -89,16 +151,29 @@ class OnlineSyncManager {
 
         // Both Host and Guest are present in the room
         if (hasHost && hasGuest) {
+          this._cancelLeaveGrace();
           this._notifyConnected();
         }
       })
       .on('presence', { event: 'leave' }, ({ key }) => {
-        // Opponent left the room
-        if (key && key !== this.role && this.hasNotifiedConnect) {
-          this.hasNotifiedConnect = false;
-          if (this.onDisconnectCallback) {
-            this.onDisconnectCallback();
-          }
+        // Grace period avoids false disconnects on brief WebSocket/tab hiccups
+        if (key && key !== this.role && this.hasNotifiedConnect && !this.leaveGraceTimer) {
+          this.leaveGraceTimer = setTimeout(() => {
+            this.leaveGraceTimer = null;
+            if (!this.supabaseChannel || !this.hasNotifiedConnect) return;
+            const state = this.supabaseChannel.presenceState();
+            const otherPresent = Boolean(state[key] && state[key].length > 0);
+            if (!otherPresent) {
+              this.hasNotifiedConnect = false;
+              if (this.heartbeatTimer) {
+                clearInterval(this.heartbeatTimer);
+                this.heartbeatTimer = null;
+              }
+              if (this.onDisconnectCallback) {
+                this.onDisconnectCallback();
+              }
+            }
+          }, 4500);
         }
       })
       .subscribe(async (status, err) => {
@@ -108,19 +183,27 @@ class OnlineSyncManager {
             joinedAt: Date.now()
           });
           this.send({ type: '_PEER_HELLO', role: this.role });
+          if (this.hasNotifiedConnect && this.role === 'guest') {
+            this.send({ type: 'REQUEST_SYNC' });
+          }
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.warn('Supabase Realtime channel issue:', status, err);
+          if (!this.hasNotifiedConnect && this.onErrorCallback) {
+            this.onErrorCallback('Không thể kết nối tới máy chủ phòng chơi. Vui lòng thử lại.');
+          }
         }
       });
   }
 
   // Create a Room (Host / Player 1)
-  createRoom(roomCode, onConnect, onMessage, onDisconnect) {
+  createRoom(roomCode, onConnect, onMessage, onDisconnect, onError) {
+    this._clearTimers();
     this.roomCode = roomCode.toUpperCase();
     this.role = 'host';
     this.onConnectionCallback = onConnect;
     this.onMessageCallback = onMessage;
     this.onDisconnectCallback = onDisconnect;
+    this.onErrorCallback = onError || null;
     this.hasNotifiedConnect = false;
     this.initBroadcast();
 
@@ -149,16 +232,21 @@ class OnlineSyncManager {
 
     this.peer.on('error', (err) => {
       console.warn('PeerJS Host Error:', err);
+      if (!this.hasNotifiedConnect && this.onErrorCallback) {
+        this.onErrorCallback('Không thể tạo phòng (mã phòng có thể đang được dùng hoặc lỗi mạng).');
+      }
     });
   }
 
   // Join a Room (Guest / Player 2)
-  joinRoom(roomCode, onConnect, onMessage, onDisconnect) {
+  joinRoom(roomCode, onConnect, onMessage, onDisconnect, onError) {
+    this._clearTimers();
     this.roomCode = roomCode.toUpperCase();
     this.role = 'guest';
     this.onConnectionCallback = onConnect;
     this.onMessageCallback = onMessage;
     this.onDisconnectCallback = onDisconnect;
+    this.onErrorCallback = onError || null;
     this.hasNotifiedConnect = false;
     this.initBroadcast();
 
@@ -176,6 +264,8 @@ class OnlineSyncManager {
       debug: 1
     });
 
+    this._startGuestConnectTimeout();
+
     this.peer.on('open', () => {
       this.conn = this.peer.connect(hostPeerId, { reliable: true });
       this.setupConnectionEvents();
@@ -183,6 +273,9 @@ class OnlineSyncManager {
 
     this.peer.on('error', (err) => {
       console.warn('PeerJS Guest Error:', err);
+      if (!this.hasNotifiedConnect && this.onErrorCallback) {
+        this.onErrorCallback('Không tìm thấy phòng hoặc lỗi kết nối. Kiểm tra lại mã phòng.');
+      }
     });
   }
 
@@ -244,6 +337,7 @@ class OnlineSyncManager {
   }
 
   disconnect() {
+    this._clearTimers();
     if (this.supabaseChannel && supabase) {
       supabase.removeChannel(this.supabaseChannel);
       this.supabaseChannel = null;
@@ -256,6 +350,7 @@ class OnlineSyncManager {
     this.broadcastChannel = null;
     this.roomCode = null;
     this.role = null;
+    this.onErrorCallback = null;
     this.hasNotifiedConnect = false;
   }
 }

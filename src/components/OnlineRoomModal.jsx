@@ -101,7 +101,7 @@ export default function OnlineRoomModal({
   };
 
   const handleLogout = () => {
-    if (onlineState.isConnected) {
+    if (onlineState.isConnected || onlineState.pendingRole) {
       onDisconnect();
     }
     logoutAccount();
@@ -416,10 +416,26 @@ export default function OnlineRoomModal({
                       </div>
                     </div>
 
+                    {onlineState.error && (
+                      <div className="p-3 rounded-xl bg-rose-950/50 border border-rose-500/40 text-xs text-rose-200 font-semibold">
+                        {onlineState.error}
+                      </div>
+                    )}
+
                     {isWaitingHost ? (
-                      <div className="w-full py-3.5 px-4 rounded-2xl font-bold text-sm bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 flex items-center justify-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Đang mở phòng {onlineState.pendingRoomCode} — Chờ Người 2 vào...</span>
+                      <div className="space-y-2.5">
+                        <div className="w-full py-3.5 px-4 rounded-2xl font-bold text-sm bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 flex items-center justify-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Đang mở phòng {onlineState.pendingRoomCode} — Chờ Người 2 vào...</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={onDisconnect}
+                          className="w-full py-2.5 rounded-xl font-bold text-xs bg-rose-950/70 hover:bg-rose-900/80 border border-rose-500/40 text-rose-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>Huỷ mở phòng</span>
+                        </button>
                       </div>
                     ) : (
                       <button
@@ -449,6 +465,12 @@ export default function OnlineRoomModal({
                       />
                     </div>
 
+                    {onlineState.error && (
+                      <div className="p-3 rounded-xl bg-rose-950/50 border border-rose-500/40 text-xs text-rose-200 font-semibold">
+                        {onlineState.error}
+                      </div>
+                    )}
+
                     <button
                       type="submit"
                       disabled={isJoiningGuest || !inputCode.trim()}
@@ -466,6 +488,17 @@ export default function OnlineRoomModal({
                         </>
                       )}
                     </button>
+
+                    {isJoiningGuest && (
+                      <button
+                        type="button"
+                        onClick={onDisconnect}
+                        className="w-full py-2.5 rounded-xl font-bold text-xs bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span>Huỷ vào phòng</span>
+                      </button>
+                    )}
                   </form>
                 )}
               </div>

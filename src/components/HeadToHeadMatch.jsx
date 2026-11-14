@@ -32,7 +32,7 @@ export default function HeadToHeadMatch({ player1, player2, isP2Bot = false, onl
   const managers = { 1: player1, 2: player2 };
   const phase = frame?.phase || 'lobby';
   const started = phase !== 'lobby';
-  latest.current = { online, guest, connected: onlineState.isConnected, send: onSendMatchMessage, speed, player1, player2, tactics };
+  latest.current = { online, guest, connected: onlineState.isConnected, send: onSendMatchMessage, speed, player1, player2, tactics, ready };
 
   const toggleReady = team => {
     if (started || (online && team !== self)) return;
@@ -120,14 +120,29 @@ export default function HeadToHeadMatch({ player1, player2, isP2Bot = false, onl
     if (!guest) return;
     const timer = setInterval(() => {
       if (!matchIdRef.current) {
-        if (latest.current.connected) latest.current.send?.({ type: 'MATCH_LIVE_REQUEST' });
+        if (latest.current.connected) {
+          latest.current.send?.({ type: 'MATCH_LIVE_REQUEST' });
+          if (latest.current.ready?.[2]) {
+            latest.current.send?.({ type: 'MATCH_LIVE_READY', team: 2, ready: true, tactic: latest.current.tactics?.[2] });
+          }
+        }
         return;
       }
       const stale = performance.now() - lastPacketRef.current > 2500;
       setWaiting(stale);
       if (stale && latest.current.connected) latest.current.send?.({ type: 'MATCH_LIVE_REQUEST' });
     }, 1000);
-    return () => clearInterval(timer);
+    const hasDoc = typeof document !== 'undefined';
+    const onVisible = () => {
+      if (hasDoc && document.visibilityState === 'visible' && latest.current.connected) {
+        latest.current.send?.({ type: 'MATCH_LIVE_REQUEST' });
+      }
+    };
+    if (hasDoc) document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(timer);
+      if (hasDoc) document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [guest]);
 
   useEffect(() => {

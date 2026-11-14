@@ -207,8 +207,8 @@ export default function App() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      const onlineRole = onlineState.role || onlineState.pendingRole || null;
-      const onlineRoomCode = onlineState.roomCode || onlineState.pendingRoomCode || null;
+      const onlineRole = onlineState.isConnected ? onlineState.role : null;
+      const onlineRoomCode = onlineState.isConnected ? onlineState.roomCode : null;
       const payload = {
         onlineRole,
         onlineRoomCode,
@@ -527,16 +527,20 @@ export default function App() {
     if (!isReconnect && onlineAccount?.displayName) {
       setPlayer1(p => ({ ...p, name: onlineAccount.displayName }));
     }
-    setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: 'host', pendingRoomCode: cleanCode });
+    setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: 'host', pendingRoomCode: cleanCode, error: null });
     onlineSync.createRoom(
       cleanCode,
       ({ role, roomCode }) => {
-        setOnlineState({ isConnected: true, role, roomCode, pendingRole: null, pendingRoomCode: null });
+        setOnlineState({ isConnected: true, role, roomCode, pendingRole: null, pendingRoomCode: null, error: null });
         setIsP2Bot(false); // disable bot in online multiplayer
         setTimeout(() => sendFullSyncStateRef.current?.(), 250);
       },
       (msg) => remoteHandlerRef.current?.(msg),
-      () => setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: null, pendingRoomCode: null })
+      () => setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: null, pendingRoomCode: null, error: null }),
+      (errMsg) => {
+        onlineSync.disconnect();
+        setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: null, pendingRoomCode: null, error: errMsg });
+      }
     );
   };
 
@@ -545,11 +549,11 @@ export default function App() {
     if (!isReconnect && onlineAccount?.displayName) {
       setPlayer2(p => ({ ...p, name: onlineAccount.displayName }));
     }
-    setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: 'guest', pendingRoomCode: cleanCode });
+    setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: 'guest', pendingRoomCode: cleanCode, error: null });
     onlineSync.joinRoom(
       cleanCode,
       ({ role, roomCode }) => {
-        setOnlineState({ isConnected: true, role, roomCode, pendingRole: null, pendingRoomCode: null });
+        setOnlineState({ isConnected: true, role, roomCode, pendingRole: null, pendingRoomCode: null, error: null });
         setIsP2Bot(false);
         setTimeout(() => {
           onlineSync.send({ type: 'REQUEST_SYNC' });
@@ -559,15 +563,38 @@ export default function App() {
         }, 200);
       },
       (msg) => remoteHandlerRef.current?.(msg),
-      () => setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: null, pendingRoomCode: null })
+      () => setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: null, pendingRoomCode: null, error: null }),
+      (errMsg) => {
+        onlineSync.disconnect();
+        setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: null, pendingRoomCode: null, error: errMsg });
+      }
     );
   };
 
   const handleDisconnectOnline = () => {
     onlineSync.disconnect();
-    setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: null, pendingRoomCode: null });
+    setOnlineState({ isConnected: false, role: null, roomCode: null, pendingRole: null, pendingRoomCode: null, error: null });
     setChatMessages([]);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('room')) {
+        url.searchParams.delete('room');
+        window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+      }
+    }
   };
+
+  // Re-sync automatically when returning to browser tab during an online game
+  useEffect(() => {
+    if (!onlineState.isConnected || onlineState.role !== 'guest') return;
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        onlineSync.send({ type: 'REQUEST_SYNC' });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [onlineState.isConnected, onlineState.role]);
 
   // Start Round 1 only when BOTH players are ready
   useEffect(() => {

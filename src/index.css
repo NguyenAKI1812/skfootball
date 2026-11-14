@@ -12,6 +12,9 @@
     background-color: #070b12;
     color: #f1f5f9;
     min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: clip;
+    overflow-wrap: anywhere;
     -webkit-font-smoothing: antialiased;
     /* Stadium floodlight night ambiance + subtle tactical micro-grid */
     background-image:
