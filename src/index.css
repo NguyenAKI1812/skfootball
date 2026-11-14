@@ -204,3 +204,5 @@
   filter: blur(2px);
   animation: goalGoldSweep 1.35s ease-in-out infinite;
 }
+
+@import './club.css';

@@ -79,25 +79,27 @@ export default function AuctionArena1v1({
 
   if (isLobby) {
     return (
-      <div className="broadcast-panel border border-slate-800 rounded-xl p-5 flex flex-col justify-between relative overflow-hidden h-full min-h-[460px]">
+      <div className="auction-welcome broadcast-panel">
         <div className="flex justify-between items-center pb-3 border-b border-white/10">
           <span className="font-display text-sm font-extrabold uppercase tracking-wider text-amber-300 bg-amber-950/60 px-2.5 py-0.5 rounded-sm border border-amber-500/40">
-            PRE-MATCH · READY CHECK
+            PHÒNG ĐẤU GIÁ / SẴN SÀNG
           </span>
           <span className="font-mono-num text-xs font-bold text-slate-400">
             {totalRounds} VÒNG · 1000M €
           </span>
         </div>
 
-        <div className="my-auto py-6 text-center">
-          <h2 className="font-display text-3xl font-extrabold text-white uppercase tracking-wide mb-1.5">
-            SẴN SÀNG ĐẤU GIÁ 1V1
+        <div className="auction-welcome-body">
+          <h2 className="auction-headline">
+            ĐỘI BÓNG LỚN.
+            BẮT ĐẦU TỪ BẠN.
           </h2>
           <p className="text-xs text-slate-400 max-w-md mx-auto mb-6">
-            Cả 2 HLV bấm Sẵn sàng để mở thẻ cầu thủ đầu tiên và bắt đầu đếm ngược vòng 1.
+            11 lượt đấu giá. 1.000 triệu euro. Cân nhắc từng lựa chọn để tạo nên đội hình chiến thắng.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="auction-facts"><span><strong>11</strong> VỊ TRÍ</span><span><strong>1.000</strong> TRIỆU €</span><span><strong>01</strong> NHÀ VÔ ĐỊCH</span></div>
+          <div className="ready-managers grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className={`p-4 rounded-xl border transition-colors ${
               p1Ready ? 'bg-emerald-950/35 border-emerald-400' : 'bg-slate-950/80 border-emerald-500/35'
             }`}>
@@ -105,7 +107,7 @@ export default function AuctionArena1v1({
                 {player1.name}
               </div>
               <div className="font-mono-num text-xs text-slate-400 mb-3">
-                BUDGET: <strong className="text-amber-400">{player1.budget}M</strong>
+                NGÂN SÁCH: <strong className="text-amber-400">{player1.budget}M</strong>
               </div>
               <button
                 onClick={onP1Ready}
@@ -140,7 +142,7 @@ export default function AuctionArena1v1({
                 </button>
               </div>
               <div className="font-mono-num text-xs text-slate-400 mb-3">
-                BUDGET: <strong className="text-amber-400">{player2.budget}M</strong>
+                NGÂN SÁCH: <strong className="text-amber-400">{player2.budget}M</strong>
               </div>
               <button
                 onClick={onP2Ready}

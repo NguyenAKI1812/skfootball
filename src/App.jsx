@@ -17,13 +17,11 @@ import { onlineSync } from './utils/onlineSync';
 import { getSavedAccount } from './utils/accountService';
 import { sounds } from './utils/sound';
 import { 
-  Trophy, 
   Volume2, 
   VolumeX, 
   RotateCcw,
   Globe,
   Edit3,
-  Wifi,
   HelpCircle
 } from 'lucide-react';
 
@@ -1086,118 +1084,30 @@ export default function App() {
   const rightTacticsReady = isGuestView ? p1TacticsReady : p2TacticsReady;
 
   return (
-    <div className="min-h-screen text-slate-100 flex flex-col relative">
-      {/* Full-Web Half-Screen Background Light for Current Highest Bidder */}
-      <div
-        className={`fixed inset-y-0 left-0 w-1/2 pointer-events-none transition-opacity duration-500 z-0 bg-gradient-to-r from-emerald-500/45 via-emerald-500/22 to-transparent ${
-          gameState === 'auction' && highestBidder?.id === leftPlayer.id ? 'opacity-100' : 'opacity-0'
-        }`}
-      />
-      <div
-        className={`fixed inset-y-0 right-0 w-1/2 pointer-events-none transition-opacity duration-500 z-0 bg-gradient-to-l from-rose-500/45 via-rose-500/22 to-transparent ${
-          gameState === 'auction' && highestBidder?.id === rightPlayer.id ? 'opacity-100' : 'opacity-0'
-        }`}
-      />
-
-      {/* Broadcast Top Bar */}
-      <header className="border-b border-white/10 bg-slate-950/85 backdrop-blur-md px-5 py-2.5 sticky top-0 z-40 flex flex-wrap gap-3 justify-between items-center">
-        <div className="flex items-center gap-2.5">
-          <span className="w-1.5 h-7 bg-amber-400 rounded-sm" />
-          <div>
-            <h1 className="font-display text-xl font-extrabold text-white tracking-wider uppercase leading-none flex items-center gap-2">
-              FOOTBALL AUCTION 1V1
-              {onlineState.isConnected && (
-                <span className="text-[10px] font-sans font-extrabold uppercase px-2 py-0.5 rounded-sm bg-emerald-500 text-slate-950 tracking-wider">
-                  ONLINE · {onlineState.roomCode}
-                </span>
-              )}
-            </h1>
-          </div>
-        </div>
-
-        {/* TV Broadcast Scorebug: Self (Green) vs Opponent (Red) */}
-        <div className="flex items-stretch rounded overflow-hidden border border-slate-800 bg-slate-900/90 shadow-lg">
-          <button
-            type="button"
-            onClick={() => setShowProfileModal(true)}
-            className="flex items-center gap-2.5 px-3 py-1.5 border-l-4 border-l-emerald-400 hover:bg-slate-800/70 transition-colors cursor-pointer text-xs"
-            title="Bấm để đổi tên của bạn"
-          >
-            <span className="font-display text-sm font-extrabold text-emerald-400 uppercase tracking-wide">
-              {leftPlayer.name}
-            </span>
-            <span className="font-mono-num font-bold text-amber-400">{leftPlayer.budget}M</span>
-            <span className="font-mono-num text-[10px] bg-slate-950 px-1.5 py-0.5 rounded-sm text-slate-300 border border-slate-800">
-              {Object.keys(leftPlayer.squad).length}/11
-            </span>
-          </button>
-
-          <div className="px-2.5 flex items-center justify-center bg-slate-950 border-x border-slate-800 font-display text-xs font-extrabold text-slate-400 tracking-widest">
-            VS
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowProfileModal(true)}
-            className="flex items-center gap-2.5 px-3 py-1.5 border-r-4 border-r-rose-500 border-y border-y-rose-500/40 bg-rose-950/20 hover:bg-rose-950/35 transition-colors cursor-pointer text-xs"
-            title="Bấm để đổi tên đối thủ"
-          >
-            <span className="font-mono-num text-[10px] bg-slate-950 px-1.5 py-0.5 rounded-sm text-slate-300 border border-rose-500/30">
-              {Object.keys(rightPlayer.squad).length}/11
-            </span>
-            <span className="font-mono-num font-bold text-amber-400">{rightPlayer.budget}M</span>
-            <span className="font-display text-sm font-extrabold text-rose-400 uppercase tracking-wide">
-              {rightPlayer.name}
-            </span>
-          </button>
-        </div>
-
-        {/* Minimal Utility Controls */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowGuideModal(true)}
-            className="px-3 py-1.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5"
-            title="Hướng dẫn cách chơi, CHEM, đổi vị trí & đấu giá"
-          >
-            <HelpCircle className="w-3.5 h-3.5" />
-            <span>Hướng Dẫn</span>
-          </button>
-
-          <button
-            onClick={() => setShowProfileModal(true)}
-            className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
-            title="Đổi tên & avatar HLV"
-          >
-            Đặt Tên
-          </button>
-
-          <button
-            onClick={() => setShowOnlineModal(true)}
-            className={`px-3 py-1.5 rounded border text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-              onlineState.isConnected
-                ? 'bg-emerald-950/70 border-emerald-500 text-emerald-300'
-                : 'bg-sky-700 hover:bg-sky-600 text-white border-sky-500/60'
-            }`}
-          >
-            {onlineState.isConnected ? 'Phòng Online' : 'Chơi Online'}
-          </button>
-
-          <button
-            onClick={toggleSound}
-            className="p-2 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-colors cursor-pointer"
-            title={isMuted ? "Bật âm thanh" : "Tắt âm thanh"}
-          >
-            {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
-          </button>
-          <button
-            onClick={() => handleRestart(true)}
-            className="p-2 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-colors cursor-pointer"
-            title="Chơi lại từ đầu"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
-        </div>
+    <div className="club-app min-h-screen text-slate-100 flex flex-col relative">
+      <header className="club-header">
+        <a className="club-brand" href="#main-content" aria-label="SK Football — đến khu vực chơi">
+          <span className="club-monogram">SK<span>FC</span></span>
+          <span className="club-wordmark">SK FOOTBALL<small>THE AUCTION CLUB</small></span>
+        </a>
+        <div className="club-session"><span className={onlineState.isConnected ? 'session-dot online' : 'session-dot'} />{onlineState.isConnected ? 'ONLINE · ' + onlineState.roomCode : 'ĐẤU GIÁ CẦU THỦ · 1V1'}</div>
+        <nav className="club-tools" aria-label="Điều khiển game">
+          <button onClick={() => setShowGuideModal(true)} className="tool-link"><HelpCircle size={16} /><span>Luật chơi</span></button>
+          <button onClick={() => setShowProfileModal(true)} className="tool-link"><Edit3 size={16} /><span>Huấn luyện viên</span></button>
+          <button onClick={() => setShowOnlineModal(true)} className="club-online"><Globe size={15} />{onlineState.isConnected ? 'Phòng online' : 'Chơi online'}<span aria-hidden="true">↗</span></button>
+          <button onClick={toggleSound} className="tool-icon" aria-label={isMuted ? 'Bật âm thanh' : 'Tắt âm thanh'} title={isMuted ? 'Bật âm thanh' : 'Tắt âm thanh'}>{isMuted ? <VolumeX size={17} /> : <Volume2 size={17} />}</button>
+          <button onClick={() => handleRestart(true)} className="tool-icon" aria-label="Chơi lại từ đầu" title="Chơi lại từ đầu"><RotateCcw size={17} /></button>
+        </nav>
       </header>
+      <div className="club-context">
+        <div><span className="club-eyebrow">{gameState === 'final_match' ? 'MATCHDAY / 03' : gameState === 'tactics' ? 'TEAM SHEET / 02' : 'TRANSFER ROOM / 01'}</span><h1>{gameState === 'final_match' ? 'Ngày thi đấu.' : gameState === 'tactics' ? 'Đội hình của bạn.' : 'Xây đội hình. Viết lịch sử.'}</h1></div>
+        <ol className="club-progress" aria-label="Tiến trình trận đấu">
+          {['Đấu giá', 'Xếp đội', 'Thi đấu'].map((label, index) => {
+            const active = gameState === 'final_match' ? 2 : gameState === 'tactics' ? 1 : 0;
+            return <li key={label} className={index === active ? 'is-current' : index < active ? 'is-complete' : ''} aria-current={index === active ? 'step' : undefined}><span>{index < active ? '✓' : '0' + (index + 1)}</span>{label}</li>;
+          })}
+        </ol>
+      </div>
 
       {/* Top Chat Strip: Self Chat Button + Latest Message (Left) | Opponent Latest Message (Right) */}
       <ChatBox
@@ -1207,7 +1117,7 @@ export default function App() {
       />
 
       {/* Main Content Area: Centered Vertically on Desktop */}
-      <main className="flex-1 p-3.5 max-w-[1700px] mx-auto w-full flex flex-col justify-center relative z-10">
+      <main id="main-content" className="club-main">
         {gameState === 'final_match' ? (
           <HeadToHeadMatch 
             player1={player1} 
@@ -1219,9 +1129,9 @@ export default function App() {
             onRestart={() => handleRestart(true)} 
           />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
+          <div className="auction-layout">
             {/* Left: Self Squad Pitch (Green) */}
-            <div className="lg:col-span-3">
+            <div className="squad-column">
               <PitchView 
                 squad={leftPlayer.squad} 
                 budget={leftPlayer.budget} 
@@ -1233,7 +1143,7 @@ export default function App() {
             </div>
 
             {/* Center: Live 1v1 Auction Stage with Flank Bidding Stands */}
-            <div className="lg:col-span-6">
+            <div className="auction-column">
               <AuctionArena1v1 
                 currentRound={currentRoundIdx + 1}
                 totalRounds={schedule.length}
@@ -1276,7 +1186,7 @@ export default function App() {
             </div>
 
             {/* Right: Opponent Squad Pitch (Red with Red Border) */}
-            <div className="lg:col-span-3">
+            <div className="squad-column">
               <PitchView 
                 squad={rightPlayer.squad} 
                 budget={rightPlayer.budget} 
@@ -1289,6 +1199,7 @@ export default function App() {
           </div>
         )}
       </main>
+      <footer className="club-footer"><span>SK FOOTBALL <span aria-hidden="true">/</span> THE AUCTION CLUB</span><span>11 cầu thủ. Một đội bóng của riêng bạn.</span></footer>
 
       {/* Round End Result Modal */}
       {gameState === 'round_result' && (

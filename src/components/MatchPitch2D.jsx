@@ -1913,7 +1913,7 @@ export default function MatchPitch2D({
     : `${currentMinute <= 45 ? 'HIỆP 1' : 'HIỆP 2'} · PHÚT ${currentMinute}'`;
 
   return (
-    <div className="w-full h-full flex flex-col rounded-xl border border-slate-800 bg-slate-950/90 p-2.5 shadow-xl relative overflow-hidden">
+    <div className="match-pitch-panel w-full h-full flex flex-col relative overflow-hidden">
       <div className="flex items-center justify-between gap-2 mb-2 px-1">
         <div className="flex items-center gap-2 min-w-0">
           <span className="inline-flex items-center gap-1.5 text-[11px] font-display font-extrabold uppercase tracking-wider text-emerald-400 truncate">

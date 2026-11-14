@@ -53,7 +53,7 @@ export default function PitchView({ squad = {}, title = "SQUAD", budget = 100, o
 
   return (
     <div
-      className={`broadcast-panel rounded-xl p-3.5 flex flex-col justify-between relative select-none transition-all ${
+      className={`squad-panel broadcast-panel rounded-xl p-3.5 flex flex-col justify-between relative select-none transition-all ${
         isOpponent
           ? 'border-2 border-rose-500/85 shadow-[0_0_24px_rgba(244,63,94,0.18)]'
           : 'border border-emerald-500/40'
@@ -77,7 +77,7 @@ export default function PitchView({ squad = {}, title = "SQUAD", budget = 100, o
               {title}
             </h2>
             <div className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase mt-0.5">
-              SQUAD{' '}
+              ĐỘI HÌNH{' '}
               <span className={`font-mono-num font-bold ${isOpponent ? 'text-rose-300' : 'text-emerald-300'}`}>
                 {players.length}/11
               </span>

@@ -149,8 +149,8 @@ export default function HeadToHeadMatch({ player1, player2, isP2Bot = false, onl
   const hasPenalties = phase === 'penalty' || (frame?.penalties?.length || 0) > 0;
 
   return (
-    <div className="broadcast-panel border border-slate-800 rounded-xl p-3 md:p-4 max-w-[1660px] mx-auto w-full">
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 bg-slate-950/90 border border-slate-800 rounded-lg p-4 mb-3">
+    <div className="match-centre">
+      <div className="match-scoreboard">
         <div className="min-w-0"><div className="font-display text-lg md:text-2xl font-extrabold text-emerald-400 uppercase truncate">{left.name}</div><p className="text-xs text-slate-400">{TACTICS[tactics[self]].label}</p></div>
         <div className="text-center"><p className="text-[10px] md:text-xs text-amber-300 font-bold mb-1">{status}</p><div className="font-mono-num text-4xl md:text-5xl font-extrabold">{score[self]} <span className="text-slate-600">–</span> {score[other]}</div>{hasPenalties && <p className="text-xs text-amber-300 mt-1">PEN {frame.penScore[self]} – {frame.penScore[other]}</p>}</div>
         <div className="min-w-0 text-right"><div className="font-display text-lg md:text-2xl font-extrabold text-rose-400 uppercase truncate">{right.name}</div><p className="text-xs text-slate-400">{TACTICS[tactics[other]].label}</p></div>
@@ -159,17 +159,17 @@ export default function HeadToHeadMatch({ player1, player2, isP2Bot = false, onl
       {waiting && <div className="flex gap-2 items-center rounded border border-amber-500/40 bg-amber-950/30 p-3 mb-3 text-sm text-amber-200"><WifiOff size={16} /> Đang chờ kết nối lại để tiếp tục trận đấu…</div>}
 
       {!started ? (
-        <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-5 text-center">
-          <h2 className="font-display text-2xl font-extrabold text-white uppercase">TRẬN ĐẤU SỐNG</h2>
-          <p className="text-sm text-slate-400 max-w-xl mx-auto mt-2 mb-5">Chọn cách chơi cho đội của bạn. Cầu thủ tự tìm khoảng trống, phối hợp và dứt điểm; mỗi pha bóng quyết định kết quả.</p>
+        <div className="match-preparation">
+          <h2 className="preparation-title">Kế hoạch trước giờ bóng lăn.</h2>
+          <p className="text-sm text-slate-400 max-w-xl mx-auto mt-2 mb-5">Đội hình đã đủ. Chọn cách chơi, xác nhận sẵn sàng và để cầu thủ thể hiện trên sân.</p>
           <div className="grid md:grid-cols-2 gap-4">
             {[self, other].map(team => {
               const info = calcSquadStats(managers[team].squad);
               const disabled = (online && team !== self) || ready[team];
-              return <div key={team} className={`rounded-xl border p-4 text-left ${team === self ? 'border-emerald-500/40 bg-emerald-950/15' : 'border-rose-500/40 bg-rose-950/15'}`}>
+              return <div key={team} className={`tactic-team rounded-xl border p-4 text-left ${team === self ? 'border-emerald-500/40 bg-emerald-950/15' : 'border-rose-500/40 bg-rose-950/15'}`}>
                 <h3 className={`font-display text-xl font-bold uppercase ${team === self ? 'text-emerald-400' : 'text-rose-400'}`}>{managers[team].name}</h3>
                 <p className="text-xs text-slate-400 mb-3">OVR {info.avgOvr} · CHEM {info.chemistry}</p>
-                <div className="grid grid-cols-2 gap-2">{Object.entries(TACTICS).map(([key, tactic]) => <button type="button" key={key} disabled={disabled} aria-pressed={tactics[team] === key} onClick={() => chooseTactic(team, key)} className={`text-left rounded-lg p-3 border transition-colors disabled:cursor-default ${tactics[team] === key ? 'border-amber-400 bg-amber-400/10 text-amber-200' : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500'}`}><span className="font-bold text-sm block">{tactic.label}</span><span className="text-[11px] text-slate-400 leading-snug block mt-1">{tactic.description}</span></button>)}</div>
+                <div className="grid grid-cols-2 gap-2">{Object.entries(TACTICS).map(([key, tactic]) => <button type="button" key={key} disabled={disabled} aria-pressed={tactics[team] === key} onClick={() => chooseTactic(team, key)} className={`tactic-choice text-left rounded-lg p-3 border transition-colors disabled:cursor-default ${tactics[team] === key ? 'border-amber-400 bg-amber-400/10 text-amber-200' : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500'}`}><span className="font-bold text-sm block">{tactic.label}</span><span className="text-[11px] text-slate-400 leading-snug block mt-1">{tactic.description}</span></button>)}</div>
                 <button type="button" disabled={online && team !== self} onClick={() => toggleReady(team)} className={`w-full mt-4 py-3 rounded-lg font-bold disabled:opacity-50 ${ready[team] ? 'bg-emerald-400 text-slate-950' : 'bg-slate-700 text-white hover:bg-slate-600'}`}>{ready[team] ? 'ĐÃ SẴN SÀNG' : 'SẴN SÀNG'}</button>
               </div>;
             })}
@@ -177,22 +177,22 @@ export default function HeadToHeadMatch({ player1, player2, isP2Bot = false, onl
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+          <div className="match-stats grid grid-cols-2 md:grid-cols-4">
             {[[`${possession}%`, 'Kiểm soát bóng', `${100 - possession}%`], [stats[self].shots, 'Dứt điểm', stats[other].shots], [stats[self].passes, 'Chuyền thành công', stats[other].passes], [stats[self].saves, 'Cứu thua', stats[other].saves]].map(([a, label, b]) => <div key={label} className="flex justify-between items-center gap-2 bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-2"><strong className="text-emerald-400 font-mono-num">{a}</strong><span className="text-[10px] text-slate-400 uppercase text-center">{label}</span><strong className="text-rose-400 font-mono-num">{b}</strong></div>)}
           </div>
           {phase === 'finished' && <div className="rounded-xl border border-amber-500/60 bg-amber-950/20 p-4 mb-3 text-center"><Trophy className="inline text-amber-300 mr-2" /><strong className="font-display text-xl uppercase text-amber-300">{managers[frame.winner]?.name} giành chiến thắng!</strong>{frame.mvp && <p className="text-sm text-slate-300 mt-2">Cầu thủ xuất sắc: <strong className="text-white">{frame.mvp.name}</strong></p>}<button onClick={onRestart} className="mt-3 mx-auto flex items-center gap-2 px-5 py-2 bg-amber-400 text-slate-950 font-bold rounded"><RotateCcw size={16} /> Chơi trận mới</button></div>}
-          <div className="grid xl:grid-cols-[minmax(0,1.7fr)_minmax(280px,1fr)] gap-3">
+          <div className="match-stage">
             <MatchPitch2D leftSquad={left.squad} rightSquad={right.squad} leftTeamNum={self} rightTeamNum={other} leftName={left.name} rightName={right.name}
               currentMinute={minute} matchPhase={phase === 'halftime' ? 'playing' : phase} isHalfTime={phase === 'halftime'} simSpeed={speed}
               onToggleSpeed={!guest && phase !== 'finished' ? () => setSpeed(v => v === 1 ? 2 : 1) : null} liveSnapshot={frame} />
             <div className="flex flex-col gap-3 min-w-0">
-              <div className={`rounded-xl border p-4 min-h-[140px] ${notice?.type === 'GOAL' ? 'border-amber-400 bg-amber-950/30' : 'border-slate-700 bg-slate-950/70'}`}>
+              <div className={`match-commentary rounded-xl border p-4 min-h-[140px] ${notice?.type === 'GOAL' ? 'border-amber-400 bg-amber-950/30' : 'border-slate-700 bg-slate-950/70'}`}>
                 <div className="text-xs uppercase tracking-wider text-amber-300 font-bold mb-2">{phase === 'countdown' ? `Khai cuộc sau ${countdown}` : notice ? EVENT_NAMES[notice.type] : 'Diễn biến trên sân'}</div>
                 {notice?.player && <div className="flex items-center gap-3 mb-2">{notice.player.photo && <img src={notice.player.photo} alt="" className="w-12 h-12 object-cover rounded-lg border border-slate-700" />}<strong className={notice.team === self ? 'text-emerald-300' : 'text-rose-300'}>{notice.player.name}</strong></div>}
                 <p className="text-sm leading-relaxed text-slate-200">{notice?.text || (phase === 'kickoff' ? 'Hai đội vào vị trí giao bóng.' : phase === 'penalty' ? 'Cầu thủ chuẩn bị thực hiện lượt sút tiếp theo.' : phase === 'finished' ? 'Trận đấu đã kết thúc.' : 'Các cầu thủ đang di chuyển tìm khoảng trống và tổ chức lên bóng.')}</p>
               </div>
               {hasPenalties && <div className="rounded-xl border border-slate-700 bg-slate-950/70 p-3"><h3 className="text-xs text-amber-300 font-bold uppercase mb-2">Loạt sút luân lưu</h3>{[self, other].map(team => <div key={team} className="flex gap-2 items-center my-2"><span className={`text-xs truncate w-24 ${team === self ? 'text-emerald-300' : 'text-rose-300'}`}>{managers[team].name}</span><div className="flex gap-1 flex-wrap">{frame.penalties.filter(k => k.team === team).map(k => <span key={k.round} title={k.shooter.name} className={`w-5 h-5 rounded-full text-center text-xs leading-5 ${k.scored ? 'bg-emerald-500 text-slate-950' : 'bg-rose-600 text-white'}`}>{k.scored ? '✓' : '×'}</span>)}</div></div>)}</div>}
-              <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3 flex-1"><h3 className="font-display text-sm uppercase font-bold text-slate-300 border-b border-slate-800 pb-2">Nhật ký trận đấu</h3><div className="max-h-[340px] overflow-y-auto mt-2 space-y-2">{frame.events.length ? frame.events.map(ev => <div key={ev.id} className="flex gap-2 text-xs border-b border-slate-800/70 pb-2"><span className="font-mono-num text-amber-300 shrink-0 w-8">{ev.type === 'PENALTY' ? 'PEN' : `${ev.min}'`}</span><p className={ev.type === 'GOAL' ? 'text-amber-200 font-semibold' : 'text-slate-300'}>{ev.text}</p></div>) : <p className="text-xs text-slate-500">Chờ tình huống đầu tiên…</p>}</div></div>
+              <div className="match-journal rounded-xl border border-slate-800 bg-slate-950/70 p-3 flex-1"><h3 className="font-display text-sm uppercase font-bold text-slate-300 border-b border-slate-800 pb-2">Nhật ký trận đấu</h3><div className="max-h-[340px] overflow-y-auto mt-2 space-y-2">{frame.events.length ? frame.events.map(ev => <div key={ev.id} className="flex gap-2 text-xs border-b border-slate-800/70 pb-2"><span className="font-mono-num text-amber-300 shrink-0 w-8">{ev.type === 'PENALTY' ? 'PEN' : `${ev.min}'`}</span><p className={ev.type === 'GOAL' ? 'text-amber-200 font-semibold' : 'text-slate-300'}>{ev.text}</p></div>) : <p className="text-xs text-slate-500">Chờ tình huống đầu tiên…</p>}</div></div>
             </div>
           </div>
         </>
