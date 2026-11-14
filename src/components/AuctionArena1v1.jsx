@@ -347,9 +347,9 @@ export default function AuctionArena1v1({
               )}
             </div>
 
-            <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-xs font-mono-num bg-slate-900/80 px-2.5 py-1 rounded border border-emerald-500/20">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">CÒN LẠI</span>
-              <strong className="text-amber-300 text-sm">{player1.budget}M €</strong>
+            <div className="mt-2 pt-1.5 border-t border-white/10 flex items-center justify-between gap-1 text-xs font-mono-num bg-slate-900/80 px-1.5 py-1 rounded border border-emerald-500/20">
+              <span className="text-[9px] font-bold text-slate-400 uppercase whitespace-nowrap">CÒN LẠI</span>
+              <strong className="text-amber-300 text-xs whitespace-nowrap">{player1.budget}M €</strong>
             </div>
           </div>
         </div>
@@ -449,9 +449,9 @@ export default function AuctionArena1v1({
               )}
             </div>
 
-            <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-xs font-mono-num bg-slate-900/80 px-2.5 py-1 rounded border border-rose-500/25">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">CÒN LẠI</span>
-              <strong className="text-amber-300 text-sm">{player2.budget}M €</strong>
+            <div className="mt-2 pt-1.5 border-t border-white/10 flex items-center justify-between gap-1 text-xs font-mono-num bg-slate-900/80 px-1.5 py-1 rounded border border-rose-500/25">
+              <span className="text-[9px] font-bold text-slate-400 uppercase whitespace-nowrap">CÒN LẠI</span>
+              <strong className="text-amber-300 text-xs whitespace-nowrap">{player2.budget}M €</strong>
             </div>
           </div>
         </div>
@@ -473,22 +473,22 @@ export default function AuctionArena1v1({
               <span className="font-display text-sm font-extrabold text-emerald-400 uppercase tracking-wide truncate">
                 {player1.name}
               </span>
-              <span className="text-[10px] text-slate-400 font-mono-num">
+              <span className="text-[10px] text-slate-400 font-mono-num whitespace-nowrap shrink-0">
                 MAX <strong className="text-amber-400">{p1MaxBid}M</strong>
               </span>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 shrink-0">
               {isP1Turn ? (
-                <span className="text-[9px] font-extrabold bg-amber-400 text-slate-950 px-2 py-0.5 rounded-sm uppercase tracking-wider animate-pulse">
+                <span className="text-[9px] font-extrabold bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded-sm uppercase tracking-wider animate-pulse whitespace-nowrap">
                   ĐẾN LƯỢT
                 </span>
               ) : (
-                <span className="text-[9px] font-bold bg-slate-800 text-slate-400 px-2 py-0.5 rounded-sm uppercase tracking-wider">
+                <span className="text-[9px] font-bold bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-sm uppercase tracking-wider whitespace-nowrap">
                   CHỜ LƯỢT
                 </span>
               )}
               {isP1Highest && (
-                <span className="text-[9px] font-extrabold bg-emerald-500 text-slate-950 px-2 py-0.5 rounded-sm uppercase tracking-wider">
+                <span className="text-[9px] font-extrabold bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded-sm uppercase tracking-wider whitespace-nowrap">
                   LEADING
                 </span>
               )}
@@ -544,7 +544,7 @@ export default function AuctionArena1v1({
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
                     {p1StagedBid !== null ? 'Mức giá chọn:' : 'Bấm +10 / +25 / +50'}
                   </span>
-                  <span className="font-mono-num text-sm font-extrabold text-emerald-300">
+                  <span className="font-mono-num text-xs font-extrabold text-emerald-300 whitespace-nowrap shrink-0">
                     {p1StagedBid !== null ? `${p1StagedBid}M €` : `${currentBid}M €`}
                   </span>
                 </div>
@@ -602,22 +602,22 @@ export default function AuctionArena1v1({
               >
                 {isP2Bot ? 'BOT' : 'P2'}
               </button>
-              <span className="text-[10px] text-slate-400 font-mono-num">
+              <span className="text-[10px] text-slate-400 font-mono-num whitespace-nowrap shrink-0">
                 MAX <strong className="text-amber-400">{p2MaxBid}M</strong>
               </span>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 shrink-0">
               {isP2Turn ? (
-                <span className="text-[9px] font-extrabold bg-amber-400 text-slate-950 px-2 py-0.5 rounded-sm uppercase tracking-wider animate-pulse">
+                <span className="text-[9px] font-extrabold bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded-sm uppercase tracking-wider animate-pulse whitespace-nowrap">
                   ĐẾN LƯỢT
                 </span>
               ) : (
-                <span className="text-[9px] font-bold bg-slate-800 text-slate-400 px-2 py-0.5 rounded-sm uppercase tracking-wider">
+                <span className="text-[9px] font-bold bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-sm uppercase tracking-wider whitespace-nowrap">
                   CHỜ LƯỢT
                 </span>
               )}
               {isP2Highest && (
-                <span className="text-[9px] font-extrabold bg-rose-600 text-white px-2 py-0.5 rounded-sm uppercase tracking-wider">
+                <span className="text-[9px] font-extrabold bg-rose-600 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-wider whitespace-nowrap">
                   LEADING
                 </span>
               )}
@@ -677,7 +677,7 @@ export default function AuctionArena1v1({
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
                     {p2StagedBid !== null ? 'Mức giá chọn:' : 'Bấm +10 / +25 / +50'}
                   </span>
-                  <span className="font-mono-num text-sm font-extrabold text-rose-300">
+                  <span className="font-mono-num text-xs font-extrabold text-rose-300 whitespace-nowrap shrink-0">
                     {p2StagedBid !== null ? `${p2StagedBid}M €` : `${currentBid}M €`}
                   </span>
                 </div>

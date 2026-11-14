@@ -66,26 +66,26 @@ export default function PlayerCard({ player, compact = false, highlight = false,
       </div>
 
       {/* FUT-style Rating + Portrait Layout */}
-      <div className={`relative flex items-center justify-center ${size === 'modal' ? 'gap-4 py-1' : 'gap-4 py-1'} z-10`}>
+      <div className="relative flex items-center justify-center gap-3 py-1 z-10">
         {/* Stacked OVR & POS on left like an official FUT card */}
-        <div className={`flex flex-col items-center justify-center ${size === 'modal' ? 'pr-3' : 'pr-3'} border-r border-amber-500/25`}>
+        <div className="flex flex-col items-center justify-center pr-2.5 border-r border-amber-500/25 shrink-0">
           <span
-            className={`font-display ${size === 'modal' ? 'text-5xl' : 'text-5xl'} font-extrabold leading-none tracking-tight ${
+            className={`font-display ${size === 'modal' ? 'text-4xl' : 'text-4xl'} font-extrabold leading-none tracking-tight whitespace-nowrap ${
               isTier1 ? 'text-amber-300' : 'text-slate-100'
             }`}
           >
             {player.ovr}
           </span>
-          <span className={`font-display ${size === 'modal' ? 'text-base' : 'text-base'} font-bold tracking-widest text-emerald-400 mt-1`}>
+          <span className="font-display text-sm font-bold tracking-widest text-emerald-400 mt-1 whitespace-nowrap">
             {posCode}
           </span>
         </div>
 
         {/* Crisp Portrait */}
-        <div className="relative">
+        <div className="relative shrink-0">
           {player.photo && !imgError ? (
             <div
-              className={`${size === 'modal' ? 'w-32 h-32' : 'w-36 h-36'} rounded-lg overflow-hidden border shadow-lg ${
+              className={`${size === 'modal' ? 'w-28 h-28' : 'w-28 h-28'} rounded-lg overflow-hidden border shadow-lg ${
                 isTier1 ? 'border-amber-400/70' : 'border-slate-500/70'
               }`}
             >
