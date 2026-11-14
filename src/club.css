@@ -156,115 +156,23 @@ button:disabled { cursor: not-allowed; }
   .match-pitch-panel { padding: 7px; }
   .match-pitch-panel .soccer-pitch { aspect-ratio: 1.18; }
 }
-/* Mobile landscape optimization (e.g. phones rotated horizontally on Chrome/Safari) */
-@media (orientation: landscape) and (max-height: 540px) {
-  .club-header {
-    min-height: 48px;
-    padding: 6px max(16px, env(safe-area-inset-right, 16px)) 6px max(16px, env(safe-area-inset-left, 16px));
-    gap: 10px;
-    flex-wrap: nowrap;
-  }
-  .club-monogram { width: 30px; height: 36px; font-size: 18px; padding-top: 4px; }
-  .club-wordmark { font-size: 18px; }
-  .club-wordmark small { display: none; }
-  .club-tools { margin-left: auto; gap: 4px; flex-wrap: nowrap; }
-  .tool-link, .tool-icon { min-height: 36px; }
-  .club-online { padding: 7px 10px; font-size: 10px; min-height: 36px; }
-  .club-context {
-    display: none;
-  }
-  .chat-bar {
-    padding-top: 4px;
-    padding-inline: max(14px, env(safe-area-inset-left, 14px));
-  }
-  .chat-bar > div {
-    min-height: 36px;
-    gap: 6px;
-  }
-  .chat-bar button {
-    padding: 5px 10px;
-    font-size: 11px;
-    min-height: 34px;
-  }
-  .chat-hint {
-    display: none !important;
-  }
-  .club-main, .club-footer {
-    width: calc(100% - max(28px, env(safe-area-inset-left, 14px) + env(safe-area-inset-right, 14px)));
-  }
-  .club-main { padding-top: 6px; padding-bottom: 12px; }
-  .club-footer { padding: 8px 0 max(10px, env(safe-area-inset-bottom, 10px)); flex-direction: row; }
-
-  /* Keep 3-column auction & squad pitch side-by-side in landscape */
-  .auction-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr) minmax(0, 1fr);
-    gap: 10px;
-    align-items: start;
-  }
-  .auction-column { grid-column: auto; grid-row: auto; }
-  .squad-panel { padding: 8px; }
-  .squad-panel > div:first-child { min-height: 40px; gap: 6px; }
-  .squad-panel .soccer-pitch { height: clamp(205px, 56dvh, 285px); }
-  .auction-welcome { min-height: 0; padding: 12px; }
-  .auction-welcome-body { padding: 6px 0; }
-  .auction-welcome-body > p { display: none; }
-  .auction-headline { font-size: clamp(20px, 3vw, 28px); margin-bottom: 6px; }
-  .auction-facts { margin: 8px 0; padding: 6px 0; }
-  .auction-facts strong { font-size: 18px; margin-bottom: 2px; }
-  .auction-welcome > div:last-child { display: none; }
-  .ready-managers { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .ready-managers > div > button {
-    width: auto;
-    min-width: 112px;
-    padding: 8px 16px;
-    min-height: 38px;
-    font-size: 11px;
-  }
-  .tactic-team > button {
-    width: auto;
-    min-width: 132px;
-    padding: 8px 20px;
-    min-height: 38px;
-  }
-
-  /* Compact Match View: pitch on left, commentary/journal on right */
-  .match-scoreboard { padding: 8px 14px; margin-bottom: 8px; gap: 12px; }
-  .match-scoreboard > div:nth-child(2) > div { font-size: clamp(26px, 4vw, 38px); }
-  .match-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 8px; }
-  .match-stats > div { padding: 6px 10px; border-bottom: 0; border-right: 1px solid var(--club-line); }
-  .match-stats > div:last-child { border-right: 0; }
-  .match-stage {
-    grid-template-columns: minmax(0, 1.55fr) minmax(220px, 1fr);
-    gap: 10px;
-    align-items: start;
-  }
-  .match-pitch-panel { padding: 6px; }
-  .match-pitch-panel .soccer-pitch {
-    aspect-ratio: 1.5;
-    max-height: calc(100dvh - 135px);
-    width: auto;
-    max-width: 100%;
-    margin-inline: auto;
-  }
-  .match-commentary, .match-journal { padding: 10px 12px; }
-  .match-commentary { min-height: 0; }
-  .match-journal > div { max-height: 130px; }
-  .match-preparation { padding: 14px; }
-  .preparation-title { font-size: 22px; }
-  .match-preparation > p { margin: 4px 0 12px; }
-  .tactic-team { padding: 12px; }
-  .tactic-choice { min-height: 64px; padding: 8px 22px 8px 10px; }
-
-  /* Ensure modals never clip vertically in short landscape viewports */
-  .fixed.inset-0.z-50 {
-    overflow-y: auto;
-    padding: max(8px, env(safe-area-inset-top, 8px)) max(12px, env(safe-area-inset-right, 12px)) max(8px, env(safe-area-inset-bottom, 8px)) max(12px, env(safe-area-inset-left, 12px));
-  }
-  .fixed.inset-0.z-50 > div {
-    max-height: 92dvh;
-    overflow-y: auto;
-    margin-block: auto;
-  }
+/* Mobile landscape uses 1280px PC layout scaled to screen width, with slimmed top chrome */
+.mobile-landscape-pc .club-header {
+  min-height: 56px;
+  padding: 8px max(24px, env(safe-area-inset-left, 24px), env(safe-area-inset-right, 24px));
+}
+.mobile-landscape-pc .club-context { display: none; }
+.mobile-landscape-pc .chat-bar { padding-top: 6px; }
+.mobile-landscape-pc .chat-hint { display: none; }
+.mobile-landscape-pc .club-main { padding-top: 8px; padding-bottom: 16px; }
+.mobile-landscape-pc .fixed.inset-0.z-50 {
+  overflow-y: auto;
+  padding: max(12px, env(safe-area-inset-top, 12px)) max(16px, env(safe-area-inset-right, 16px)) max(12px, env(safe-area-inset-bottom, 12px)) max(16px, env(safe-area-inset-left, 16px));
+}
+.mobile-landscape-pc .fixed.inset-0.z-50 > div {
+  max-height: 92dvh;
+  overflow-y: auto;
+  margin-block: auto;
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
