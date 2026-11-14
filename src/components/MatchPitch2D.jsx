@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FastForward, Play } from 'lucide-react';
+import { projectLiveFrame, interpolateLiveFrame } from '../utils/matchPresentation';
 
 // Spacious formation anchors:
 // kickoffX/Y = strictly inside own half; liveX/Y = staggered neutral shape shifted dynamically by ball position
@@ -51,15 +52,15 @@ function moveBallSmoothTo(ball, tx, ty, dtSec, speedPctPerSec = 18) {
   const dx = stx - safeNum(ball.x, stx);
   const dy = sty - safeNum(ball.y, sty);
   const dist = Math.hypot(dx, dy);
-  if (dist <= 0.35) {
+  if (dist <= 0.001) {
     ball.x = stx;
     ball.y = sty;
     return true;
   }
-  const step = Math.min(dist, Math.max(0.1, speedPctPerSec * dtSec));
+  const step = Math.min(dist, Math.max(0, speedPctPerSec * dtSec));
   ball.x = clampPct(ball.x + (dx / dist) * step, 1.0, 99.0);
   ball.y = clampPct(ball.y + (dy / dist) * step, 1.0, 99.0);
-  return dist - step <= 0.6;
+  return dist - step <= 0.001;
 }
 
 // Smooth, speed-capped stepper — sole writer to visible tok.x / tok.y (prevents any teleportation)
@@ -69,18 +70,25 @@ function movePlayerSmooth(tok, targetX, targetY, dtSec, maxSpeed = 5.2, responsi
   const ty = clampPct(targetY, 1.0, 99.0);
   const curX = safeNum(tok.x, tx);
   const curY = safeNum(tok.y, ty);
-  const stepFactor = Math.min(1, Math.max(0.01, dtSec * responsiveness));
-  let dx = (tx - curX) * stepFactor;
-  let dy = (ty - curY) * stepFactor;
-  const stepDist = Math.hypot(dx, dy);
-  const maxStep = Math.max(0.04, maxSpeed * dtSec);
-  if (stepDist > maxStep && stepDist > 0.0001) {
-    const scale = maxStep / stepDist;
-    dx *= scale;
-    dy *= scale;
-  }
-  tok.x = clampPct(curX + dx, 1.5, 98.5);
-  tok.y = clampPct(curY + dy, 1.0, 99.0);
+  if (dtSec <= 0) return;
+  const dx = tx - curX;
+  const dy = ty - curY;
+  const distance = Math.hypot(dx, dy);
+  const desiredSpeed = Math.min(maxSpeed, distance * responsiveness);
+  const desiredVx = distance > 0.001 ? dx / distance * desiredSpeed : 0;
+  const desiredVy = distance > 0.001 ? dy / distance * desiredSpeed : 0;
+  let vx = safeNum(tok.vx, 0);
+  let vy = safeNum(tok.vy, 0);
+  const change = Math.hypot(desiredVx - vx, desiredVy - vy);
+  const blend = change > 0 ? Math.min(1, 24 * dtSec / change) : 1;
+  vx += (desiredVx - vx) * blend;
+  vy += (desiredVy - vy) * blend;
+  const speed = Math.hypot(vx, vy);
+  if (speed > maxSpeed) { vx *= maxSpeed / speed; vy *= maxSpeed / speed; }
+  tok.vx = vx;
+  tok.vy = vy;
+  tok.x = clampPct(curX + vx * dtSec, 1.5, 98.5);
+  tok.y = clampPct(curY + vy * dtSec, 1.0, 99.0);
 }
 
 // Hard safety clamp so neither goalkeeper can ever wander outside their goal / 6-yard area
@@ -265,7 +273,7 @@ function enforceSetPieceDistance(tok, spotX, spotY, minDist) {
 }
 
 // Select an open teammate with clear passing lane (only active outfield players)
-function selectOpenPassTarget(passer, allPlayers, prevPasserKey, preferredSide, buildupTargetKey = null) {
+function selectOpenPassTarget(passer, allPlayers, prevPasserKey, preferredSide, buildupTargetKey = null, simTime = 0) {
   if (!passer) return null;
   const attackDir = passer.side === 'left' ? 1 : -1;
   const teammates = allPlayers.filter(
@@ -292,7 +300,7 @@ function selectOpenPassTarget(passer, allPlayers, prevPasserKey, preferredSide, 
     const antiBounce = mate.key === prevPasserKey ? -24 : 0;
     const buildupBias = buildupTargetKey && mate.key === buildupTargetKey ? 18 : 0;
     const attackBias = preferredSide === passer.side ? forwardGain * 0.65 : forwardGain * 0.15;
-    const jitter = (Math.sin(passer.idx * 7 + mate.idx * 13 + Date.now() * 0.002) + 1) * 2.5;
+    const jitter = (Math.sin(passer.idx * 7 + mate.idx * 13 + simTime * 0.002) + 1) * 2.5;
 
     const score = laneScore + distScore + attackBias + antiBounce + buildupBias + jitter;
     if (score > bestScore) {
@@ -348,7 +356,12 @@ export default function MatchPitch2D({
   penaltyKick = null,
   isHalfTime = false,
   simSpeed = 1,
-  onToggleSpeed = null
+  onToggleSpeed = null,
+  onHighlightImpact = null,
+  onHighlightComplete = null,
+  onPenaltyImpact = null,
+  onPenaltyComplete = null,
+  liveSnapshot = null
 }) {
   const leftBaseTokens = useMemo(() => buildTeamTokens(leftSquad, 'left'), [leftSquad]);
   const rightBaseTokens = useMemo(() => buildTeamTokens(rightSquad, 'right'), [rightSquad]);
@@ -376,12 +389,12 @@ export default function MatchPitch2D({
         actionBadge: null
       };
     });
-    const initCarrier = getLivePlayer(players, leftBaseTokens, null, ['st', 'cam', 'cm1']);
+    const initCarrier = getLivePlayer(players, leftTeamNum === 1 ? leftBaseTokens : rightBaseTokens, null, ['st', 'cam', 'cm1']);
     simRef.current = {
       simTime: 0,
       players,
       ball: { x: 50, y: 50 },
-      possSide: 'left',
+      possSide: initCarrier?.side || 'left',
       carrierKey: initCarrier?.key || null,
       prevCarrierKey: null,
       turnoverCycle: 0,
@@ -405,7 +418,6 @@ export default function MatchPitch2D({
       },
       highlightState: null,
       penState: { key: null, phase: 'approach', phaseMs: 0, elapsedMs: 0 },
-      fadeOpacity: 0,
       netRippleSide: null,
       goalSweepSide: null,
       goalBanner: null,
@@ -429,7 +441,12 @@ export default function MatchPitch2D({
     eventsTimeline,
     penaltyKick,
     isHalfTime,
-    simSpeed
+    simSpeed,
+    onHighlightImpact,
+    onHighlightComplete,
+    onPenaltyImpact,
+    onPenaltyComplete,
+    liveSnapshot
   });
   latestPropsRef.current = {
     leftBaseTokens,
@@ -443,7 +460,12 @@ export default function MatchPitch2D({
     eventsTimeline,
     penaltyKick,
     isHalfTime,
-    simSpeed
+    simSpeed,
+    onHighlightImpact,
+    onHighlightComplete,
+    onPenaltyImpact,
+    onPenaltyComplete,
+    liveSnapshot
   };
 
   const [renderFrame, setRenderFrame] = useState({
@@ -451,7 +473,6 @@ export default function MatchPitch2D({
     ballX: 50,
     ballY: 50,
     carrierKey: null,
-    fadeOpacity: 0,
     netRippleSide: null,
     goalSweepSide: null,
     goalBanner: null,
@@ -465,6 +486,7 @@ export default function MatchPitch2D({
   useEffect(() => {
     let rafId = null;
     let lastTs = performance.now();
+    let liveDisplay = null;
 
     const stepSimulation = (now) => {
       const sim = simRef.current;
@@ -473,11 +495,18 @@ export default function MatchPitch2D({
         return;
       }
 
-      const rawDt = Math.min(50, Math.max(8, now - lastTs));
+      const rawDt = Math.min(50, Math.max(0, now - lastTs));
       lastTs = now;
       const props = latestPropsRef.current;
+      if (props.liveSnapshot) {
+        const target = projectLiveFrame(props.liveSnapshot, [...props.leftBaseTokens, ...props.rightBaseTokens], props.leftTeamNum);
+        liveDisplay = interpolateLiveFrame(liveDisplay, target, rawDt / 1000);
+        setRenderFrame(liveDisplay);
+        rafId = requestAnimationFrame(stepSimulation);
+        return;
+      }
       const speedMult = props.simSpeed === 2 ? 2 : 1;
-      const dtMs = props.activeHighlight ? rawDt : rawDt * speedMult;
+      const dtMs = rawDt * speedMult;
       const dtSec = dtMs / 1000;
       sim.simTime += dtMs;
 
@@ -503,12 +532,12 @@ export default function MatchPitch2D({
       sim.goalSweepSide = null;
       sim.goalBanner = null;
       sim.eventBanner = null;
-      sim.fadeOpacity = 0;
 
-      // IFAB Law 8: Start of 2nd half (45' -> 46') Right team kicks off from center circle
+      // Team 2 kicks off the second half, independent of the viewer's side.
       if (sim.prevMinute <= 45 && props.currentMinute >= 46 && !props.activeHighlight) {
-        const stRight = getLivePlayer(players, props.rightBaseTokens, null, ['st', 'cam', 'cm1']);
-        if (stRight) resetOpenPlayState(sim, stRight, props.leftPoss);
+        const secondHalfTokens = props.leftTeamNum === 2 ? props.leftBaseTokens : props.rightBaseTokens;
+        const taker = getLivePlayer(players, secondHalfTokens, null, ['st', 'cam', 'cm1']);
+        if (taker) resetOpenPlayState(sim, taker, props.leftPoss);
       }
       sim.prevMinute = props.currentMinute;
 
@@ -530,6 +559,9 @@ export default function MatchPitch2D({
       // MODE 1: COUNTDOWN / HALF-TIME / FINISHED (IFAB Law 8 Kickoff & Halves)
       // =========================================================================
       if (props.matchPhase === 'countdown' || props.isHalfTime || props.matchPhase === 'finished') {
+        const kickoffTeam = props.isHalfTime ? 2 : 1;
+        const kickoffTokens = props.leftTeamNum === kickoffTeam ? props.leftBaseTokens : props.rightBaseTokens;
+        const kickoffTaker = getLivePlayer(players, kickoffTokens, null, ['st', 'cam', 'cm1']);
         playersArr.forEach(tok => {
           if (tok.isSentOff) {
             tok.targetX = 50;
@@ -547,8 +579,10 @@ export default function MatchPitch2D({
             tok.targetX = 50 + (tok.side === 'left' ? -7 : 7);
             tok.targetY = clampPct(16 + tok.idx * 7.2, 14, 86);
           } else {
-            tok.targetX = tok.kickoffX;
-            tok.targetY = tok.kickoffY;
+            tok.targetX = tok.key === kickoffTaker?.key ? 50 : tok.kickoffX;
+            tok.targetY = tok.key === kickoffTaker?.key ? 50 : tok.kickoffY;
+            if (tok.key === kickoffTaker?.key) tok.isBallLocked = true;
+            else if (tok.side !== kickoffTaker?.side && Math.hypot(tok.targetX - 50, tok.targetY - 50) < 10.5) tok.targetX = tok.side === 'left' ? 39 : 61;
           }
           tok.maxSpd = 6.5;
           tok.resp = 3.2;
@@ -559,7 +593,7 @@ export default function MatchPitch2D({
         enforceGoalkeeperZone(playersArr);
 
         moveBallSmoothTo(sim.ball, 50, 50, dtSec, 20);
-        sim.carrierKey = null;
+        if (kickoffTaker) resetOpenPlayState(sim, kickoffTaker, props.leftPoss);
         sim.highlightState = null;
         ballControlledThisFrame = true;
 
@@ -575,9 +609,9 @@ export default function MatchPitch2D({
         const penGkX = isLeftPk ? 95.0 : 5.0;
         const shooterTokens = isLeftPk ? props.leftBaseTokens : props.rightBaseTokens;
         const gkTokens = isLeftPk ? props.rightBaseTokens : props.leftBaseTokens;
-        const shooter = getLivePlayer(players, shooterTokens, pk?.player, ['st', 'cam']);
+        const shooter = getLivePlayer(players, shooterTokens, pk?.shooter, ['st', 'cam']);
         const oppGk = getLivePlayer(players, gkTokens, null, ['gk']);
-        const pkKey = pk ? `${pk.round}-${pk.team}-${pk.player?.name}-${pk.scored}` : 'idle';
+        const pkKey = pk ? `${pk.round}-${pk.team}-${pk.shooter?.name}-${pk.scored}` : 'idle';
 
         if (sim.penState.key !== pkKey) {
           sim.penState = { key: pkKey, phase: 'approach', phaseMs: 0, elapsedMs: 0 };
@@ -623,7 +657,7 @@ export default function MatchPitch2D({
           oppGk.resp = 3.8;
           if (ps.phase === 'shot' || ps.phase === 'done') {
             oppGk.diveAngle = pk?.scored ? (isLeftPk ? 26 : -26) : (isLeftPk ? -28 : 28);
-            oppGk.actionBadge = !pk?.scored ? '🧤 CẢN PHÁ!' : null;
+            oppGk.actionBadge = ps.phase === 'done' && !pk?.scored ? '🧤 CẢN PHÁ!' : null;
           }
         }
 
@@ -639,9 +673,8 @@ export default function MatchPitch2D({
             ps.phaseMs = 0;
           }
         } else if (ps.phase === 'runup') {
-          sim.ball.x = penX;
-          sim.ball.y = 50;
-          if (ps.phaseMs >= 320 || (shooter && Math.hypot(shooter.x - penX, shooter.y - 50) < 1.8 && ps.phaseMs >= 220)) {
+          moveBallSmoothTo(sim.ball, penX, 50, dtSec, 22);
+          if (shooter && Math.hypot(shooter.x - penX, shooter.y - 50) < 1.8 && ps.phaseMs >= 220) {
             ps.phase = 'shot';
             ps.phaseMs = 0;
             ps.shotFromX = shooter ? shooter.x : penX;
@@ -654,10 +687,10 @@ export default function MatchPitch2D({
           if (arrived) {
             ps.phase = 'done';
             ps.phaseMs = 0;
+            props.onPenaltyImpact?.(pk);
           }
         } else if (pk.scored) {
-          sim.ball.x = penGoalX + (isLeftPk ? 1.1 : -1.1);
-          sim.ball.y = pkTargetY;
+          moveBallSmoothTo(sim.ball, penGoalX + (isLeftPk ? 1.1 : -1.1), pkTargetY, dtSec, 22);
           sim.netRippleSide = isLeftPk ? 'right' : 'left';
           if (shooter) {
             shooter.isCelebrating = true;
@@ -666,6 +699,10 @@ export default function MatchPitch2D({
         } else {
           moveBallSmoothTo(sim.ball, penGkX + (isLeftPk ? -6 : 6), 36, dtSec, 13);
           sim.impactRing = { x: penGkX, y: 45, color: '#fbbf24' };
+        }
+        if (ps.phase === 'done' && ps.phaseMs >= 900 && !ps.completed) {
+          ps.completed = true;
+          props.onPenaltyComplete?.(pk);
         }
         ballControlledThisFrame = true;
 
@@ -686,13 +723,12 @@ export default function MatchPitch2D({
         if (!sim.highlightState || sim.lastHighlightRef !== hl) {
           sim.lastHighlightRef = hl;
           const scorer = getLivePlayer(players, atkTokens, hl.player, ['st', 'cam', 'lw', 'rw', 'cm1']);
-          const assistLive = hl.assist ? getLivePlayer(players, atkTokens, hl.assist, ['cam', 'cm1', 'lw', 'rw']) : null;
+          const assistLive = hl.assistPlayer ? getLivePlayer(players, atkTokens, hl.assistPlayer, ['cam', 'cm1', 'lw', 'rw']) : null;
           const playmaker =
             assistLive && assistLive.key !== scorer?.key
               ? assistLive
               : pickNearestLiveOutfield(players, atkTokens, sim.ball.x, sim.ball.y, scorer ? [scorer.key] : []);
           const oppGk = getLivePlayer(players, defTokens, null, ['gk']);
-          const ownGk = getLivePlayer(players, atkTokens, null, ['gk']);
           const oppShooter = getLivePlayer(players, defTokens, hl.oppPlayer, ['st', 'lw', 'rw', 'cam']);
 
           const shootSpot = hl.isPenalty
@@ -704,8 +740,6 @@ export default function MatchPitch2D({
                 y: clampPct((scorer?.y ?? 50) * 0.45 + 27.5, 34, 66)
               };
 
-          const cornerY = shootSpot.y < 50 ? 11 : 89;
-          const cornerX = isLeftEvent ? 93.5 : 6.5;
           const celebMates = atkTokens
             .filter(t => t.slotId !== 'gk' && t.key !== scorer?.key && !players[t.key]?.isSentOff)
             .slice(0, 3)
@@ -723,7 +757,7 @@ export default function MatchPitch2D({
                 y: clampPct(oppShooter?.y ?? 50, 36, 64)
               };
           const gkSaveY = oppShootSpot.y < 50 ? 45 : 55;
-          sim.saveCount = (sim.saveCount || 0) + 1;
+          if (hl.type === 'SAVE') sim.saveCount += 1;
           const isCornerRebound = hl.type === 'SAVE' ? sim.saveCount % 2 === 1 : false;
 
           const topCorner = gkSaveY < 50;
@@ -739,9 +773,7 @@ export default function MatchPitch2D({
           const saveCollector = pickNearestLiveOutfield(players, atkTokens, saveReboundSpot.x, saveReboundSpot.y);
 
           // Woodwork Setup
-          const woodworkShooter = hl.isForT1
-            ? getLivePlayer(players, props.leftBaseTokens, hl.player, ['st', 'lw', 'rw', 'cam'])
-            : getLivePlayer(players, props.rightBaseTokens, hl.player, ['st', 'lw', 'rw', 'cam']);
+          const woodworkShooter = getLivePlayer(players, atkTokens, hl.player, ['st', 'lw', 'rw', 'cam']);
           const wwLeft = woodworkShooter ? woodworkShooter.side === 'left' : isLeftEvent;
           const wwSpotX = wwLeft
             ? clampPct(Math.max(safeNum(woodworkShooter?.x, 76), 74), 70, 84)
@@ -812,15 +844,8 @@ export default function MatchPitch2D({
               scorerKey: scorer?.key || null,
               playmakerKey: playmaker?.key || null,
               oppGkKey: oppGk?.key || null,
-              ownGkKey: ownGk?.key || null,
               oppShooterKey: oppShooter?.key || null,
               shootSpot,
-              assistPos: {
-                x: clampPct(lerp(safeNum(playmaker?.x, shootSpot.x - dir * 12), shootSpot.x - dir * 12, 0.4), 18, 82),
-                y: clampPct(lerp(safeNum(playmaker?.y, shootSpot.y), shootSpot.y + (shootSpot.y < 50 ? 14 : -14), 0.4), 14, 86)
-              },
-              cornerX,
-              cornerY,
               celebMates,
               gkKey: gk?.key || null,
               gkX,
@@ -873,270 +898,136 @@ export default function MatchPitch2D({
           }
         };
 
+        const reportImpact = () => {
+          if (hs.impacted) return;
+          hs.impacted = true;
+          props.onHighlightImpact?.(hl);
+        };
+        const reportComplete = () => {
+          if (hs.completed) return;
+          hs.completed = true;
+          props.onHighlightComplete?.(hl);
+        };
         const tMs = hs.elapsedMs;
         const plan = hs.plan;
 
         // -----------------------------------------------------------------------
-        // A. GOAL CHOREOGRAPHY (6000ms total; impact at 2200ms)
+        // A. GOAL: receive, shoot, celebrate, then walk back to kickoff
         // Shot ALWAYS launches directly from scorer's live feet after ball arrives!
         // -----------------------------------------------------------------------
         if (evType === 'GOAL') {
-          const scorer = plan.scorerKey ? players[plan.scorerKey] : null;
-          const playmaker = plan.playmakerKey ? players[plan.playmakerKey] : null;
-          const oppGk = plan.oppGkKey ? players[plan.oppGkKey] : null;
-          const ownGk = plan.ownGkKey ? players[plan.ownGkKey] : null;
+          const scorer = players[plan.scorerKey];
+          const playmaker = players[plan.playmakerKey];
+          const oppGk = players[plan.oppGkKey];
           const isPenGoal = Boolean(hl.isPenalty);
           const goalLineX = isLeftEvent ? 97.1 : 2.9;
-          const deepNetX = isLeftEvent ? 98.5 : 1.5;
           const goalY = isPenGoal ? 43.5 : clampPct(lerp(plan.shootSpot.y, 50, 0.35), 42, 58);
-          const oppGkX = isLeftEvent ? 94.5 : 5.5;
+          const kickOffTokens = isLeftEvent ? props.rightBaseTokens : props.leftBaseTokens;
+          const kickOffTaker = getLivePlayer(players, kickOffTokens, null, ['st', 'cam', 'cm1']);
           const offsideLineX = getOffsideLineX(playersArr, actSide);
-
           if (hs.phase === 'init') setPhase(isPenGoal ? 'pen_setup' : 'to_playmaker');
+          const celebrating = hs.phase === 'in_net';
+          const restarting = hs.phase === 'restart';
 
-          if (tMs <= 4100) {
-            playersArr.forEach(tok => {
-              if (tok.isSentOff) {
-                tok.targetX = 50;
-                tok.targetY = 1.2;
-                tok.maxSpd = 6.0;
-                return;
-              }
-              if (tok.slotId === 'gk') return;
-              if (scorer && tok.key === scorer.key) return;
-              if (!isPenGoal && playmaker && tok.key === playmaker.key) return;
-              const anchor = getShiftedAnchor(tok, sim.ball.x, sim.ball.y, actSide, null, tMs < 2200 ? offsideLineX : null);
-              tok.targetX = anchor.x;
-              tok.targetY = anchor.y;
-              tok.maxSpd = 4.2;
-              tok.resp = 2.6;
-              if (tMs >= 2200 && plan.celebMates.includes(tok.key)) {
-                const cmIdx = plan.celebMates.indexOf(tok.key);
-                const signY = plan.cornerY < 50 ? 1 : -1;
-                tok.targetX = plan.cornerX - dir * (3.5 + cmIdx * 2.5);
-                tok.targetY = clampPct(plan.cornerY + signY * (4 + cmIdx * 3.5), 10, 90);
-                tok.maxSpd = 7.2;
-                tok.resp = 3.6;
-                tok.actionBadge = '🎉';
-              }
-            });
-
-            if (ownGk) {
-              ownGk.targetX = ownGk.liveX;
-              ownGk.targetY = 50;
-              ownGk.maxSpd = 3.8;
+          playersArr.forEach(tok => {
+            if (tok.isSentOff) {
+              tok.targetX = 50;
+              tok.targetY = 1.2;
+              return;
             }
-
-            if (isPenGoal) {
-              if (scorer) {
-                scorer.isBallLocked = true;
-                if (tMs < 2200) {
-                  scorer.targetX = plan.shootSpot.x - dir * 1.0;
-                  scorer.targetY = plan.shootSpot.y;
-                  scorer.maxSpd = 7.5;
-                  scorer.resp = 3.5;
-                } else {
-                  scorer.isStar = true;
-                  scorer.isCelebrating = true;
-                  scorer.actionBadge = '🙌 GOAL!';
-                  scorer.targetX = plan.cornerX;
-                  scorer.targetY = plan.cornerY;
-                  scorer.maxSpd = 7.5;
-                  scorer.resp = 3.6;
-                }
-                sim.carrierKey = scorer.key;
+            if (restarting) {
+              tok.targetX = tok.key === kickOffTaker?.key ? 50 : tok.kickoffX;
+              tok.targetY = tok.key === kickOffTaker?.key ? 50 : tok.kickoffY;
+              if (tok.side === actSide && Math.hypot(tok.targetX - 50, tok.targetY - 50) < 10.5) {
+                tok.targetX = isLeftEvent ? 39 : 61;
               }
-            } else {
-              if (playmaker) {
-                playmaker.targetX = hs.phase === 'to_playmaker' ? sim.ball.x : plan.assistPos.x;
-                playmaker.targetY = hs.phase === 'to_playmaker' ? sim.ball.y : plan.assistPos.y;
-                playmaker.maxSpd = 7.5;
-                playmaker.resp = 3.4;
-                playmaker.isBallLocked = true;
-                if (tMs >= 2200) playmaker.actionBadge = '🎯 KIẾN TẠO';
-              }
-              if (scorer) {
-                scorer.isBallLocked = true;
-                if (tMs < 2200) {
-                  // Run onto the pass/ball rather than running away from it
-                  const targetX = hs.phase === 'to_playmaker'
-                    ? clampOnsideX(scorer, plan.shootSpot.x - dir * 4, sim.ball.x, offsideLineX)
-                    : plan.shootSpot.x;
-                  scorer.targetX = targetX;
-                  scorer.targetY = plan.shootSpot.y;
-                  scorer.maxSpd = 8.2;
-                  scorer.resp = 3.6;
-                } else {
-                  scorer.isStar = true;
-                  scorer.isCelebrating = true;
-                  scorer.actionBadge = '🙌 GOAL!';
-                  scorer.targetX = plan.cornerX;
-                  scorer.targetY = plan.cornerY;
-                  scorer.maxSpd = 7.5;
-                  scorer.resp = 3.6;
-                }
-              }
+              tok.maxSpd = 7.5;
+              return;
             }
-
+            const anchor = getShiftedAnchor(tok, sim.ball.x, sim.ball.y, actSide, null,
+              hs.phase === 'to_playmaker' ? offsideLineX : null);
+            tok.targetX = anchor.x;
+            tok.targetY = anchor.y;
+            if (celebrating && (tok.key === scorer?.key || plan.celebMates.includes(tok.key))) {
+              const idx = Math.max(0, plan.celebMates.indexOf(tok.key) + 1);
+              tok.targetX = clampPct((scorer?.x ?? plan.shootSpot.x) - dir * idx * 3, 12, 88);
+              tok.targetY = clampPct(plan.shootSpot.y + idx * 3, 12, 88);
+              tok.isCelebrating = true;
+              tok.maxSpd = 5.0;
+            }
+          });
+          if (!restarting) {
+            if (scorer) {
+              scorer.isBallLocked = true;
+              scorer.targetX = celebrating ? scorer.x : plan.shootSpot.x - (isPenGoal ? dir : 0);
+              scorer.targetY = plan.shootSpot.y;
+              scorer.maxSpd = 7.5;
+              scorer.isStar = celebrating;
+              scorer.isCelebrating = celebrating;
+              if (celebrating) scorer.actionBadge = '🙌 GOAL!';
+            }
+            if (!isPenGoal && playmaker) {
+              playmaker.isBallLocked = true;
+              playmaker.targetX = hs.phase === 'to_playmaker' ? sim.ball.x : playmaker.x;
+              playmaker.targetY = hs.phase === 'to_playmaker' ? sim.ball.y : playmaker.y;
+              playmaker.maxSpd = 6.5;
+            }
             if (oppGk) {
-              oppGk.targetX = oppGkX;
-              oppGk.targetY = hs.phase === 'shot' || hs.phase === 'in_net' ? (goalY < 50 ? 55 : 45) : clampPct(goalY, 44, 56);
+              oppGk.targetX = isLeftEvent ? 94.5 : 5.5;
+              oppGk.targetY = hs.phase === 'shot' || celebrating ? (goalY < 50 ? 55 : 45) : 50;
               oppGk.maxSpd = 5.4;
-              oppGk.resp = 3.4;
-              if ((hs.phase === 'shot' || hs.phase === 'in_net') && tMs < 2700) {
-                oppGk.diveAngle = isLeftEvent ? 26 : -26;
-              }
+              if (hs.phase === 'shot') oppGk.diveAngle = isLeftEvent ? 26 : -26;
             }
-
-            applyTargetSeparation(playersArr, 5.6, 1);
-            playersArr.forEach(tok => movePlayerSmooth(tok, tok.targetX, tok.targetY, dtSec, tok.maxSpd, tok.resp));
-            enforceGoalkeeperZone(playersArr);
-
-            if (isPenGoal) {
-              if (hs.phase === 'pen_setup') {
-                const ballReady = moveBallSmoothTo(sim.ball, plan.shootSpot.x, plan.shootSpot.y, dtSec, 22);
-                const scorerAtBall = !scorer || Math.hypot(scorer.x - sim.ball.x, scorer.y - sim.ball.y) < 2.6;
-                if (ballReady && scorerAtBall && tMs >= 1350) setPhase('shot');
-              } else if (hs.phase === 'shot') {
-                const arrived = moveBallSmoothTo(sim.ball, goalLineX, goalY, dtSec, 28);
-                sim.carrierKey = null;
-                sim.shotLine = { x1: hs.shotFromX, y1: hs.shotFromY, x2: sim.ball.x, y2: sim.ball.y, color: '#fbbf24' };
-                if (arrived || tMs >= 2200) setPhase('in_net');
-              } else {
-                moveBallSmoothTo(sim.ball, deepNetX, goalY, dtSec, 14);
-                sim.carrierKey = null;
-              }
-            } else if (hs.phase === 'to_playmaker') {
-              const px = playmaker ? playmaker.x + dir * 0.8 : sim.ball.x;
-              const py = playmaker ? playmaker.y : sim.ball.y;
-              const arrived = moveBallSmoothTo(sim.ball, px, py, dtSec, 22);
-              sim.carrierKey = playmaker?.key || null;
-              if (arrived || hs.phaseMs >= 480) setPhase('to_scorer');
-            } else if (hs.phase === 'to_scorer') {
-              const rx = scorer ? scorer.x : plan.shootSpot.x;
-              const ry = scorer ? scorer.y : plan.shootSpot.y;
-              const arrived = moveBallSmoothTo(sim.ball, rx, ry, dtSec, 21);
-              sim.carrierKey = scorer?.key || null;
-              sim.passLine = { x1: hs.passFromX, y1: hs.passFromY, x2: rx, y2: ry, color: 'rgba(255,255,255,0.45)', dashed: true };
-              if (arrived && (!scorer || Math.hypot(scorer.x - sim.ball.x, scorer.y - sim.ball.y) < 2.6)) {
-                setPhase('dribble_touch');
-              } else if (tMs >= 1450 && scorer) {
-                // Ensure scorer physically receives the ball at feet before shooting
-                moveBallSmoothTo(sim.ball, scorer.x, scorer.y, dtSec, 28);
-                if (Math.hypot(scorer.x - sim.ball.x, scorer.y - sim.ball.y) < 2.6) setPhase('dribble_touch');
-              }
-            } else if (hs.phase === 'dribble_touch') {
-              sim.ball.x = scorer ? scorer.x + dir * 1.0 : plan.shootSpot.x;
-              sim.ball.y = scorer ? scorer.y : plan.shootSpot.y;
-              sim.carrierKey = scorer?.key || null;
-              if (hs.phaseMs >= 260 && tMs >= 1500) {
-                setPhase('shot');
-              }
-            } else if (hs.phase === 'shot') {
-              const distToGoal = Math.hypot(goalLineX - sim.ball.x, goalY - sim.ball.y);
-              const timeLeft = Math.max(0.25, (2200 - tMs) / 1000);
-              const shotSpeed = Math.max(24, Math.min(34, distToGoal / timeLeft));
-              const arrived = moveBallSmoothTo(sim.ball, goalLineX, goalY, dtSec, shotSpeed);
-              sim.carrierKey = null;
-              sim.shotLine = { x1: hs.shotFromX, y1: hs.shotFromY, x2: sim.ball.x, y2: sim.ball.y, color: '#fbbf24' };
-              if (arrived) setPhase('in_net');
-            } else {
-              moveBallSmoothTo(sim.ball, deepNetX, goalY, dtSec, 14);
-              sim.carrierKey = null;
-            }
-
-            if (tMs >= 2200) {
-              sim.netRippleSide = isLeftEvent ? 'right' : 'left';
-              sim.goalSweepSide = actSide;
-              sim.goalBanner = {
-                side: actSide,
-                scorerName: scorer?.name || hl.player?.name || 'CẦU THỦ',
-                assistName: playmaker?.name && playmaker.key !== scorer?.key ? playmaker.name : null,
-                minute: hl.min
-              };
-            }
-            ballControlledThisFrame = true;
-
-          } else if (tMs <= 4900) {
-            const u = (tMs - 4100) / 800;
-            sim.fadeOpacity = u < 0.4 ? (u / 0.4) * 0.92 : u < 0.65 ? 0.92 : ((1 - u) / 0.35) * 0.92;
-            const kickOffTokens = isLeftEvent ? props.rightBaseTokens : props.leftBaseTokens;
-            const kickOffTaker = getLivePlayer(players, kickOffTokens, null, ['st', 'cam', 'cm1']);
-
-            playersArr.forEach(tok => {
-              if (tok.isSentOff) {
-                tok.targetX = 50;
-                tok.targetY = 1.2;
-                return;
-              }
-              tok.targetX = tok.kickoffX;
-              tok.targetY = tok.kickoffY;
-              if (kickOffTaker && tok.key === kickOffTaker.key) {
-                tok.targetX = 50;
-                tok.targetY = 50;
-              } else if (tok.side === actSide && tok.slotId !== 'gk') {
-                if (Math.hypot(tok.targetX - 50, tok.targetY - 50) < 10.5) {
-                  tok.targetX = isLeftEvent ? 39 : 61;
-                }
-              }
-              if (u >= 0.42 && u <= 0.62) {
-                tok.x = tok.targetX;
-                tok.y = tok.targetY;
-              } else {
-                movePlayerSmooth(tok, tok.targetX, tok.targetY, dtSec, 6.0, 3.0);
-              }
-            });
-            enforceGoalkeeperZone(playersArr);
-
-            if (u >= 0.42 && u <= 0.62) {
-              sim.ball.x = 50;
-              sim.ball.y = 50;
-            } else {
-              moveBallSmoothTo(sim.ball, 50, 50, dtSec, 22);
-            }
-            sim.carrierKey = kickOffTaker?.key || null;
-            ballControlledThisFrame = true;
-
-          } else {
-            const kickOffTokens = isLeftEvent ? props.rightBaseTokens : props.leftBaseTokens;
-            const kickOffTaker = getLivePlayer(players, kickOffTokens, null, ['st', 'cam', 'cm1']);
-            playersArr.forEach(tok => {
-              if (tok.isSentOff) {
-                tok.targetX = 50;
-                tok.targetY = 1.2;
-                return;
-              }
-              if (tok.slotId === 'gk') {
-                tok.targetX = tok.kickoffX;
-                tok.targetY = tok.kickoffY;
-                tok.maxSpd = 4.0;
-                return;
-              }
-              if (kickOffTaker && tok.key === kickOffTaker.key) {
-                tok.targetX = 50;
-                tok.targetY = 50;
-                tok.actionBadge = 'CHỜ GIAO BÓNG';
-              } else {
-                tok.targetX = tok.kickoffX;
-                tok.targetY = tok.kickoffY;
-                if (tok.side === actSide && Math.hypot(tok.targetX - 50, tok.targetY - 50) < 10.5) {
-                  tok.targetX = isLeftEvent ? 39 : 61;
-                }
-              }
-              tok.maxSpd = 4.0;
-            });
-            applyTargetSeparation(playersArr, 5.0, 1);
-            playersArr.forEach(tok => movePlayerSmooth(tok, tok.targetX, tok.targetY, dtSec, tok.maxSpd, 3.0));
-            enforceGoalkeeperZone(playersArr);
-            sim.ball.x = 50;
-            sim.ball.y = 50;
-            sim.carrierKey = kickOffTaker?.key || null;
-            if (kickOffTaker) resetOpenPlayState(sim, kickOffTaker, props.leftPoss);
-            ballControlledThisFrame = true;
           }
+          applyTargetSeparation(playersArr, 4.0, 1);
+          playersArr.forEach(tok => movePlayerSmooth(tok, tok.targetX, tok.targetY, dtSec, tok.maxSpd, tok.resp));
+          enforceGoalkeeperZone(playersArr);
+
+          if (hs.phase === 'pen_setup') {
+            const ready = moveBallSmoothTo(sim.ball, plan.shootSpot.x, plan.shootSpot.y, dtSec, 22);
+            if (ready && scorer && Math.hypot(scorer.x - sim.ball.x, scorer.y - sim.ball.y) < 1.8 && hs.phaseMs >= 600) setPhase('shot');
+          } else if (hs.phase === 'to_playmaker') {
+            const arrived = moveBallSmoothTo(sim.ball, playmaker?.x ?? scorer.x, playmaker?.y ?? scorer.y, dtSec, 20);
+            sim.carrierKey = null;
+            if (arrived) setPhase('to_scorer');
+          } else if (hs.phase === 'to_scorer') {
+            const arrived = moveBallSmoothTo(sim.ball, scorer.x, scorer.y, dtSec, 20);
+            sim.carrierKey = null;
+            sim.passLine = { x1: hs.passFromX, y1: hs.passFromY, x2: scorer.x, y2: scorer.y, color: 'rgba(255,255,255,0.45)', dashed: true };
+            if (arrived) setPhase('dribble_touch');
+          } else if (hs.phase === 'dribble_touch') {
+            moveBallSmoothTo(sim.ball, scorer.x + dir * 0.8, scorer.y, dtSec, 18);
+            sim.carrierKey = scorer.key;
+            if (hs.phaseMs >= 300 && Math.hypot(scorer.x - plan.shootSpot.x, scorer.y - plan.shootSpot.y) < 2 && Math.hypot(scorer.x - sim.ball.x, scorer.y - sim.ball.y) < 1.8) setPhase('shot');
+          } else if (hs.phase === 'shot') {
+            const arrived = moveBallSmoothTo(sim.ball, goalLineX, goalY, dtSec, 28);
+            sim.carrierKey = null;
+            sim.shotLine = { x1: hs.shotFromX, y1: hs.shotFromY, x2: sim.ball.x, y2: sim.ball.y, color: '#fbbf24' };
+            if (arrived) {
+              reportImpact();
+              setPhase('in_net');
+            }
+          } else if (celebrating) {
+            moveBallSmoothTo(sim.ball, isLeftEvent ? 98.5 : 1.5, goalY, dtSec, 12);
+            sim.carrierKey = null;
+            sim.netRippleSide = isLeftEvent ? 'right' : 'left';
+            sim.goalSweepSide = actSide;
+            sim.goalBanner = { side: actSide, scorerName: scorer.name, assistName: !isPenGoal ? hl.assistPlayer?.name : null, minute: hl.min };
+            if (hs.phaseMs >= 1500) setPhase('restart');
+          } else if (restarting) {
+            sim.eventBanner = { text: 'HAI ĐỘI TRỞ VỀ VỊ TRÍ GIAO BÓNG', tone: 'amber' };
+            const ballReady = moveBallSmoothTo(sim.ball, 50, 50, dtSec, 18);
+            const teamReady = playersArr.every(tok => tok.isSentOff || Math.hypot(tok.x - tok.targetX, tok.y - tok.targetY) < 1.4);
+            sim.carrierKey = null;
+            if (ballReady && teamReady && hs.phaseMs >= 600) {
+              resetOpenPlayState(sim, kickOffTaker, props.leftPoss);
+              reportComplete();
+            }
+          }
+          ballControlledThisFrame = true;
 
         // -----------------------------------------------------------------------
-        // B. SAVE / PENALTY SAVED (5400ms total; impact at 1800ms; Corner gated on cTaker arrival!)
+        // B. SAVE / PENALTY SAVED: shot contact, rebound or corner, recovery
         // -----------------------------------------------------------------------
         } else if (evType === 'SAVE' || evType === 'PENALTY_SAVED') {
           const gk = plan.gkKey ? players[plan.gkKey] : null;
@@ -1162,7 +1053,7 @@ export default function MatchPitch2D({
               }
               return;
             }
-            if (oppShooter && tok.key === oppShooter.key) return;
+            if (oppShooter && tok.key === oppShooter.key && ['approach', 'shot'].includes(hs.phase)) return;
 
             if (plan.isCornerRebound && (hs.phase === 'to_corner' || hs.phase === 'wait_corner_taker' || hs.phase === 'corner_cross' || hs.phase === 'corner_clear' || hs.phase === 'corner_done')) {
               if (cTaker && tok.key === cTaker.key) {
@@ -1185,6 +1076,7 @@ export default function MatchPitch2D({
                 return;
               }
               if (cCollector && tok.key === cCollector.key) {
+                tok.isBallLocked = true;
                 if (hs.phase === 'corner_done') {
                   tok.targetX = clampPct(tok.x + dir * 12, 14, 86);
                   tok.targetY = tok.y;
@@ -1210,6 +1102,7 @@ export default function MatchPitch2D({
             }
 
             if (!plan.isCornerRebound && (hs.phase === 'rebound' || hs.phase === 'rebound_done') && saveCollector && tok.key === saveCollector.key) {
+              tok.isBallLocked = true;
               if (hs.phase === 'rebound_done') {
                 tok.targetX = clampPct(tok.x + dir * 12, 14, 86);
                 tok.targetY = tok.y;
@@ -1229,7 +1122,7 @@ export default function MatchPitch2D({
             tok.maxSpd = 4.6;
           });
 
-          if (oppShooter) {
+          if (oppShooter && ['approach', 'shot'].includes(hs.phase)) {
             oppShooter.targetX = plan.oppShootSpot.x;
             oppShooter.targetY = plan.oppShootSpot.y;
             oppShooter.maxSpd = 7.2;
@@ -1240,8 +1133,8 @@ export default function MatchPitch2D({
             gk.targetY = hs.phase === 'shot' || hs.phase === 'to_corner' || hs.phase === 'rebound' ? plan.gkSaveY : 50;
             gk.maxSpd = 5.8;
             gk.resp = 3.8;
-            if (hs.phase === 'shot' || (tMs >= 1800 && tMs < 2450)) gk.diveAngle = isLeftEvent ? -28 : 28;
-            if (tMs >= 1800) {
+            if (hs.phase === 'shot' || (hs.impacted && hs.phaseMs < 500)) gk.diveAngle = isLeftEvent ? -28 : 28;
+            if (hs.impacted) {
               gk.isStar = true;
               gk.actionBadge = '🧤 CỨU THUA!';
             }
@@ -1258,13 +1151,12 @@ export default function MatchPitch2D({
             sim.carrierKey = oppShooter?.key || null;
             if (ballAtFeet && tMs >= 1150) setPhase('shot');
           } else if (hs.phase === 'shot') {
-            const dist = Math.hypot(plan.gkX - sim.ball.x, plan.gkSaveY - sim.ball.y);
-            const timeLeft = Math.max(0.25, (1800 - tMs) / 1000);
-            const shotSpd = Math.max(22, Math.min(32, dist / timeLeft));
+            const shotSpd = 28;
             const arrived = moveBallSmoothTo(sim.ball, plan.gkX, plan.gkSaveY, dtSec, shotSpd);
             sim.carrierKey = null;
             sim.shotLine = { x1: hs.shotFromX, y1: hs.shotFromY, x2: sim.ball.x, y2: sim.ball.y, color: '#fb7185' };
             if (arrived) {
+              reportImpact();
               setPhase(plan.isCornerRebound ? 'to_corner' : 'rebound');
             }
           } else if (plan.isCornerRebound) {
@@ -1276,8 +1168,7 @@ export default function MatchPitch2D({
               if (arrived) setPhase('wait_corner_taker');
             } else if (hs.phase === 'wait_corner_taker') {
               sim.eventBanner = { text: '🚩 ĐÁ PHẠT GÓC (CORNER KICK)', tone: 'amber' };
-              sim.ball.x = plan.cSpot.x;
-              sim.ball.y = plan.cSpot.y;
+              moveBallSmoothTo(sim.ball, plan.cSpot.x, plan.cSpot.y, dtSec, 22);
               sim.carrierKey = cTaker?.key || null;
               // ONLY kick the corner when cTaker is physically standing at the corner flag!
               const takerAtFlag = !cTaker || Math.hypot(cTaker.x - plan.cSpot.x, cTaker.y - plan.cSpot.y) < 2.6;
@@ -1301,8 +1192,7 @@ export default function MatchPitch2D({
               }
             } else {
               sim.eventBanner = { text: '🚩 THU HỒI BÓNG', tone: 'amber' };
-              sim.ball.x = cCollector ? cCollector.x + dir * 1.0 : sim.ball.x;
-              sim.ball.y = cCollector ? cCollector.y : sim.ball.y;
+              moveBallSmoothTo(sim.ball, cCollector ? cCollector.x + dir * 1.0 : sim.ball.x, cCollector ? cCollector.y : sim.ball.y, dtSec, 22);
               sim.carrierKey = cCollector?.key || null;
             }
           } else {
@@ -1316,15 +1206,14 @@ export default function MatchPitch2D({
                 if (saveCollector) resetOpenPlayState(sim, saveCollector, props.leftPoss);
               }
             } else {
-              sim.ball.x = saveCollector ? saveCollector.x + dir * 1.0 : plan.saveReboundSpot.x;
-              sim.ball.y = saveCollector ? saveCollector.y : plan.saveReboundSpot.y;
+              moveBallSmoothTo(sim.ball, saveCollector ? saveCollector.x + dir * 1.0 : plan.saveReboundSpot.x, saveCollector ? saveCollector.y : plan.saveReboundSpot.y, dtSec, 22);
               sim.carrierKey = saveCollector?.key || null;
             }
           }
           ballControlledThisFrame = true;
 
         // -----------------------------------------------------------------------
-        // C. WOODWORK (5400ms total; impact at 1800ms)
+        // C. WOODWORK: post contact and recovery
         // -----------------------------------------------------------------------
         } else if (evType === 'WOODWORK') {
           const shooter = plan.woodworkShooterKey ? players[plan.woodworkShooterKey] : null;
@@ -1349,6 +1238,7 @@ export default function MatchPitch2D({
             }
             if (shooter && tok.key === shooter.key) return;
             if (collector && tok.key === collector.key && (hs.phase === 'rebound' || hs.phase === 'done')) {
+              tok.isBallLocked = true;
               if (hs.phase === 'done') {
                 tok.targetX = clampPct(tok.x + (wwLeft ? -12 : 12), 14, 86);
                 tok.targetY = tok.y;
@@ -1371,7 +1261,7 @@ export default function MatchPitch2D({
             shooter.targetY = plan.wwSpotY;
             shooter.maxSpd = 7.2;
             shooter.isBallLocked = true;
-            if (tMs >= 1800) shooter.isStar = true;
+            if (hs.impacted) shooter.isStar = true;
           }
 
           applyTargetSeparation(playersArr, 5.6, 1);
@@ -1385,13 +1275,11 @@ export default function MatchPitch2D({
             sim.carrierKey = shooter?.key || null;
             if (ballAtFeet && tMs >= 1150) setPhase('shot');
           } else if (hs.phase === 'shot') {
-            const dist = Math.hypot(postX - sim.ball.x, postY - sim.ball.y);
-            const timeLeft = Math.max(0.25, (1800 - tMs) / 1000);
-            const shotSpd = Math.max(22, Math.min(32, dist / timeLeft));
+            const shotSpd = 28;
             const arrived = moveBallSmoothTo(sim.ball, postX, postY, dtSec, shotSpd);
             sim.carrierKey = null;
             sim.shotLine = { x1: hs.shotFromX, y1: hs.shotFromY, x2: sim.ball.x, y2: sim.ball.y, color: '#fbbf24' };
-            if (arrived) setPhase('rebound');
+            if (arrived) { reportImpact(); setPhase('rebound'); }
           } else if (hs.phase === 'rebound') {
             sim.impactRing = { x: postX, y: postY, color: '#f59e0b' };
             sim.eventBanner = { text: '💥 XÀ NGANG / CỘT DỌC!', tone: 'amber' };
@@ -1403,14 +1291,13 @@ export default function MatchPitch2D({
             }
           } else {
             sim.eventBanner = { text: '💥 XÀ NGANG / CỘT DỌC!', tone: 'amber' };
-            sim.ball.x = collector ? collector.x : plan.woodworkLoose.x;
-            sim.ball.y = collector ? collector.y : plan.woodworkLoose.y;
+            moveBallSmoothTo(sim.ball, collector ? collector.x : plan.woodworkLoose.x, collector ? collector.y : plan.woodworkLoose.y, dtSec, 22);
             sim.carrierKey = collector?.key || null;
           }
           ballControlledThisFrame = true;
 
         // -----------------------------------------------------------------------
-        // D. DEFENSE TACKLE (5400ms total; tackle impact at 1800ms)
+        // D. DEFENSE: tackle on contact, then clearance
         // -----------------------------------------------------------------------
         } else if (evType === 'DEFENSE') {
           const defTok = plan.defensePlayerKey ? players[plan.defensePlayerKey] : null;
@@ -1433,6 +1320,7 @@ export default function MatchPitch2D({
             }
             if ((defTok && tok.key === defTok.key) || (oppTok && tok.key === oppTok.key)) return;
             if (collector && tok.key === collector.key && (hs.phase === 'clear' || hs.phase === 'done')) {
+              tok.isBallLocked = true;
               if (hs.phase === 'done') {
                 tok.targetX = clampPct(tok.x + dir * 12, 14, 86);
                 tok.targetY = tok.y;
@@ -1445,15 +1333,16 @@ export default function MatchPitch2D({
               }
               return;
             }
-            const anchor = getShiftedAnchor(tok, sim.ball.x, sim.ball.y, tMs < 1800 ? oppSide : actSide, null);
+            const anchor = getShiftedAnchor(tok, sim.ball.x, sim.ball.y, !hs.impacted ? oppSide : actSide, null);
             tok.targetX = anchor.x;
             tok.targetY = anchor.y;
             tok.maxSpd = 4.4;
           });
 
           if (oppTok) {
+            oppTok.isBallLocked = true;
             if (hs.phase === 'approach') {
-              oppTok.targetX = clampPct(oppTok.x - dir * 3.5, 14, 86);
+              oppTok.targetX = plan.tackleX;
               oppTok.targetY = plan.tackleY;
               oppTok.maxSpd = 4.4;
             } else {
@@ -1463,10 +1352,11 @@ export default function MatchPitch2D({
             }
           }
           if (defTok) {
+            defTok.isBallLocked = true;
             defTok.targetX = hs.phase === 'approach' && oppTok ? oppTok.x - dir * 0.6 : oppTok ? oppTok.x + dir * 1.2 : plan.tackleX;
             defTok.targetY = oppTok ? oppTok.y : plan.tackleY;
             defTok.maxSpd = 7.5;
-            if (tMs >= 1800) {
+            if (hs.impacted) {
               defTok.isStar = true;
               defTok.actionBadge = '🛡️ CẮT BÓNG';
             }
@@ -1481,7 +1371,7 @@ export default function MatchPitch2D({
             const oy = oppTok ? oppTok.y : plan.tackleY;
             moveBallSmoothTo(sim.ball, ox, oy, dtSec, 20);
             sim.carrierKey = oppTok?.key || null;
-            if (tMs >= 1800) setPhase('clear');
+            if (defTok && oppTok && Math.hypot(defTok.x - sim.ball.x, defTok.y - sim.ball.y) < 2.5 && Math.hypot(oppTok.x - sim.ball.x, oppTok.y - sim.ball.y) < 2.5) { reportImpact(); setPhase('clear'); }
           } else if (hs.phase === 'clear') {
             sim.impactRing = { x: defTok ? defTok.x : plan.tackleX, y: defTok ? defTok.y : plan.tackleY, color: '#34d399' };
             sim.eventBanner = { text: '🛡️ CẢN PHÁ THÀNH CÔNG!', tone: 'amber' };
@@ -1493,21 +1383,20 @@ export default function MatchPitch2D({
             }
           } else {
             sim.eventBanner = { text: '🛡️ CẢN PHÁ THÀNH CÔNG!', tone: 'amber' };
-            sim.ball.x = collector ? collector.x + dir * 0.9 : plan.defenseClearSpot.x;
-            sim.ball.y = collector ? collector.y : plan.defenseClearSpot.y;
+            moveBallSmoothTo(sim.ball, collector ? collector.x + dir * 0.9 : plan.defenseClearSpot.x, collector ? collector.y : plan.defenseClearSpot.y, dtSec, 22);
             sim.carrierKey = collector?.key || null;
           }
           ballControlledThisFrame = true;
 
         // -----------------------------------------------------------------------
-        // E. CARD / RED CARD + FREE KICK + SENT OFF (5400ms total; whistle at 1800ms)
+        // E. CARD / RED CARD: foul contact, whistle, free kick
         // -----------------------------------------------------------------------
         } else if (evType === 'CARD' || evType === 'RED_CARD') {
           const offender = plan.offenderKey ? players[plan.offenderKey] : null;
           const oppTarget = plan.oppTargetKey ? players[plan.oppTargetKey] : null;
 
           if (hs.phase === 'init') setPhase('approach');
-          if (evType === 'RED_CARD' && offender && tMs >= 1800) {
+          if (evType === 'RED_CARD' && offender && hs.impacted) {
             offender.isSentOff = true;
           }
 
@@ -1528,14 +1417,15 @@ export default function MatchPitch2D({
             const anchor = getShiftedAnchor(tok, plan.foulX, plan.foulY, oppSide, null);
             tok.targetX = anchor.x;
             tok.targetY = anchor.y;
-            if (tMs >= 1800 && tok.side === actSide) {
+            if (hs.impacted && tok.side === actSide) {
               enforceSetPieceDistance(tok, plan.foulX, plan.foulY, 9.2);
             }
             tok.maxSpd = 4.6;
           });
 
           if (offender) {
-            if (tMs < 2600) {
+            offender.isBallLocked = true;
+            if (!hs.impacted || (hs.phase === 'foul_wait' && hs.phaseMs < 800)) {
               offender.targetX = plan.foulX;
               offender.targetY = plan.foulY;
               offender.maxSpd = 6.0;
@@ -1549,7 +1439,7 @@ export default function MatchPitch2D({
               offender.targetY = plan.foulY;
               offender.maxSpd = 5.0;
             }
-            if (tMs >= 1800) {
+            if (hs.impacted) {
               offender.isStar = true;
               offender.cardBadge = evType === 'RED_CARD' ? 'RED' : 'YELLOW';
               offender.actionBadge = evType === 'RED_CARD' ? '🟥 TRUẤT QUYỀN' : '🟨 THẺ VÀNG';
@@ -1557,11 +1447,12 @@ export default function MatchPitch2D({
           }
 
           if (oppTarget) {
-            oppTarget.isSetPieceTaker = tMs >= 1800;
+            oppTarget.isBallLocked = true;
+            oppTarget.isSetPieceTaker = hs.impacted;
             oppTarget.targetX = plan.foulX;
             oppTarget.targetY = plan.foulY;
             oppTarget.maxSpd = 6.8;
-            if (tMs >= 2600 && hs.phase === 'foul_wait') oppTarget.actionBadge = '⚽ ĐÁ PHẠT';
+            if (hs.phase === 'foul_wait') oppTarget.actionBadge = '⚽ ĐÁ PHẠT';
           }
 
           applyTargetSeparation(playersArr, 5.2, 1);
@@ -1573,7 +1464,7 @@ export default function MatchPitch2D({
             const ty = oppTarget ? oppTarget.y : plan.foulY;
             moveBallSmoothTo(sim.ball, tx, ty, dtSec, 20);
             sim.carrierKey = oppTarget?.key || null;
-            if (tMs >= 1800) setPhase('foul_wait');
+            if (tMs >= 1000 && offender && oppTarget && Math.hypot(offender.x - oppTarget.x, offender.y - oppTarget.y) < 3 && Math.hypot(sim.ball.x - oppTarget.x, sim.ball.y - oppTarget.y) < 2) { reportImpact(); setPhase('foul_wait'); }
           } else if (hs.phase === 'foul_wait') {
             moveBallSmoothTo(sim.ball, plan.foulX, plan.foulY, dtSec, 14);
             sim.carrierKey = oppTarget?.key || null;
@@ -1583,25 +1474,26 @@ export default function MatchPitch2D({
               tone: evType === 'RED_CARD' ? 'rose' : 'amber'
             };
             const takerReady = !oppTarget || Math.hypot(oppTarget.x - plan.foulX, oppTarget.y - plan.foulY) < 2.6;
-            if (takerReady && tMs >= 3600) setPhase('fk_pass');
+            if (takerReady && hs.phaseMs >= 1200 && Math.hypot(sim.ball.x - plan.foulX, sim.ball.y - plan.foulY) < 0.1) setPhase('fk_pass');
           } else {
-            const fkReceiver = pickNearestLiveOutfield(
+            if (!plan.fkReceiverKey) plan.fkReceiverKey = pickNearestLiveOutfield(
               players,
               defTokens,
               plan.foulX - dir * 14,
               plan.foulY,
               oppTarget ? [oppTarget.key] : []
-            );
+            )?.key;
+            const fkReceiver = players[plan.fkReceiverKey];
             const fx = fkReceiver ? fkReceiver.x : plan.foulX - dir * 14;
             const fy = fkReceiver ? fkReceiver.y : plan.foulY;
             const arrived = moveBallSmoothTo(sim.ball, fx, fy, dtSec, 17);
             sim.passLine = { x1: hs.passFromX, y1: hs.passFromY, x2: fx, y2: fy, color: 'rgba(255,255,255,0.45)', dashed: true };
-            if (arrived && fkReceiver) resetOpenPlayState(sim, fkReceiver, props.leftPoss);
+            if (arrived && fkReceiver) { resetOpenPlayState(sim, fkReceiver, props.leftPoss); reportComplete(); }
           }
           ballControlledThisFrame = true;
 
         // -----------------------------------------------------------------------
-        // F. THROW-IN FROM SIDELINE CONTEST (5400ms total; gated on thrower arrival!)
+        // F. THROW-IN: touchline contest, ball out, thrower arrival, pass
         // -----------------------------------------------------------------------
         } else if (evType === 'THROW_IN') {
           const thrower = plan.throwerKey ? players[plan.throwerKey] : null;
@@ -1691,10 +1583,9 @@ export default function MatchPitch2D({
           } else if (hs.phase === 'deflect') {
             const arrived = moveBallSmoothTo(sim.ball, plan.throwX, plan.throwY, dtSec, 13);
             sim.carrierKey = null;
-            if (arrived && tMs >= 1800) setPhase('wait_thrower');
+            if (arrived) { reportImpact(); setPhase('wait_thrower'); }
           } else if (hs.phase === 'wait_thrower') {
-            sim.ball.x = plan.throwX;
-            sim.ball.y = plan.throwY;
+            moveBallSmoothTo(sim.ball, plan.throwX, plan.throwY, dtSec, 22);
             sim.carrierKey = thrower?.key || null;
             sim.eventBanner = { text: '🙌 NÉM BIÊN (THROW-IN)', tone: 'cyan' };
             const throwerAtLine = !thrower || Math.hypot(thrower.x - plan.throwX, thrower.y - plan.throwY) < 2.5;
@@ -1711,11 +1602,13 @@ export default function MatchPitch2D({
               if (receiver) resetOpenPlayState(sim, receiver, props.leftPoss);
             }
           } else {
-            sim.ball.x = receiver ? receiver.x + dir * 0.9 : plan.throwX + dir * 10;
-            sim.ball.y = receiver ? receiver.y : 50;
+            moveBallSmoothTo(sim.ball, receiver ? receiver.x + dir * 0.9 : plan.throwX + dir * 10, receiver ? receiver.y : 50, dtSec, 22);
             sim.carrierKey = receiver?.key || null;
           }
           ballControlledThisFrame = true;
+        }
+        if (['corner_done', 'rebound_done', 'done'].includes(hs.phase) && hs.phaseMs >= 500) {
+          reportComplete();
         }
 
       // =========================================================================
@@ -1727,7 +1620,8 @@ export default function MatchPitch2D({
 
         let carrier = players[sim.carrierKey];
         if (!carrier || carrier.slotId === 'gk' || carrier.isSentOff) {
-          carrier = playersArr.find(p => p.slotId !== 'gk' && !p.isSentOff) || playersArr[1] || playersArr[0];
+          carrier = playersArr.filter(p => p.slotId !== 'gk' && !p.isSentOff).sort((a, b) => Math.hypot(a.x - sim.ball.x, a.y - sim.ball.y) - Math.hypot(b.x - sim.ball.x, b.y - sim.ball.y))[0];
+          if (carrier) resetOpenPlayState(sim, carrier, props.leftPoss);
           sim.carrierKey = carrier?.key || null;
         }
         const op = sim.openPlay;
@@ -1738,7 +1632,7 @@ export default function MatchPitch2D({
         const leftOffsideX = getOffsideLineX(playersArr, 'left');
         const rightOffsideX = getOffsideLineX(playersArr, 'right');
 
-        if (op.phase === 'DRIBBLE' && op.timerMs >= op.durationMs) {
+        if (op.phase === 'DRIBBLE' && op.timerMs >= op.durationMs && carrier && Math.hypot(carrier.x - sim.ball.x, carrier.y - sim.ball.y) < 2) {
           op.timerMs = 0;
 
           if (op.streakCount >= op.targetStreak) {
@@ -1773,7 +1667,7 @@ export default function MatchPitch2D({
               op.targetY = carrier.y;
             }
           } else {
-            const pick = selectOpenPassTarget(carrier, playersArr, sim.prevCarrierKey, upcomingAtkSide, upcomingBuildupKey);
+            const pick = selectOpenPassTarget(carrier, playersArr, sim.prevCarrierKey, upcomingAtkSide, upcomingBuildupKey, sim.simTime);
             if (pick && pick.mate) {
               const leadX = clampPct(pick.mate.x + atkDir * 2.5, 14, 86);
               const leadY = clampPct(pick.mate.y + ((carrier.idx + op.streakCount) % 2 === 0 ? 1.2 : -1.2), 10, 90);
@@ -1830,6 +1724,7 @@ export default function MatchPitch2D({
             return;
           }
           if (leadTargetTok && tok.key === leadTargetTok.key) {
+            tok.isBallLocked = true;
             tok.targetX = op.targetX;
             tok.targetY = op.targetY;
             tok.maxSpd = 5.6;
@@ -1837,6 +1732,7 @@ export default function MatchPitch2D({
             return;
           }
           if (intTok && tok.key === intTok.key) {
+            tok.isBallLocked = true;
             tok.targetX = carrier ? clampPct(carrier.x + atkDir * 1.4, 14, 86) : op.targetX;
             tok.targetY = carrier ? carrier.y : op.targetY;
             tok.maxSpd = 7.4;
@@ -1844,6 +1740,7 @@ export default function MatchPitch2D({
             return;
           }
           if (carrier && tok.key === carrier.key && (op.phase === 'DRIBBLE' || op.phase === 'INTERCEPT_WAIT')) {
+            tok.isBallLocked = true;
             const rawDribbleX = clampPct(carrier.x + atkDir * 2.5, 16, 84);
             const rawDribbleY = clampPct(carrier.y + Math.sin(sim.simTime * 0.002 + carrier.idx) * 2.0, 14, 86);
             tok.targetX = rawDribbleX;
@@ -1878,7 +1775,7 @@ export default function MatchPitch2D({
           const ballArrived = moveBallSmoothTo(sim.ball, tx, ty, dtSec, 17);
           const recvAtBall = !leadTargetTok || Math.hypot(leadTargetTok.x - sim.ball.x, leadTargetTok.y - sim.ball.y) < 2.6;
           sim.passLine = { x1: op.fromX, y1: op.fromY, x2: tx, y2: ty, color: 'rgba(255,255,255,0.35)', dashed: true };
-          if ((ballArrived && recvAtBall) || op.timerMs >= op.durationMs) {
+          if (ballArrived && recvAtBall) {
             if (leadTargetTok && leadTargetTok.slotId !== 'gk' && !leadTargetTok.isSentOff) {
               sim.carrierKey = leadTargetTok.key;
               sim.possSide = leadTargetTok.side;
@@ -1892,7 +1789,12 @@ export default function MatchPitch2D({
             moveBallSmoothTo(sim.ball, clampPct(carrier.x + atkDir * 1.0, 4, 96), carrier.y, dtSec, 22);
           }
           const intAtBall = !intTok || Math.hypot(intTok.x - sim.ball.x, intTok.y - sim.ball.y) < 2.6;
-          if (intAtBall || op.timerMs >= op.durationMs) {
+          if (!intAtBall && op.timerMs > 3000) {
+            op.phase = 'DRIBBLE';
+            op.timerMs = 0;
+            op.durationMs = 700;
+          }
+          if (intTok && intAtBall) {
             if (intTok && intTok.slotId !== 'gk' && !intTok.isSentOff) {
               sim.carrierKey = intTok.key;
               sim.possSide = intTok.side;
@@ -1906,7 +1808,7 @@ export default function MatchPitch2D({
           }
         } else if (op.phase === 'THROW_CONTEST') {
           const arrived = moveBallSmoothTo(sim.ball, op.targetX, op.targetY, dtSec, 13);
-          if (arrived || op.timerMs >= op.durationMs) {
+          if (arrived) {
             op.phase = 'THROW_TAKE';
             op.timerMs = 0;
             op.durationMs = 2200;
@@ -1926,17 +1828,16 @@ export default function MatchPitch2D({
           }
         } else if (op.phase === 'THROW_TAKE') {
           if (op.throwSub === 'wait') {
-            sim.ball.x = op.targetX;
-            sim.ball.y = op.targetY;
+            moveBallSmoothTo(sim.ball, op.targetX, op.targetY, dtSec, 22);
             const takerAtLine = !throwTaker || Math.hypot(throwTaker.x - op.targetX, throwTaker.y - op.targetY) < 2.4;
-            if ((takerAtLine && op.timerMs >= 350) || op.timerMs >= 1300) {
+            if (takerAtLine && op.timerMs >= 350) {
               op.throwSub = 'pass';
             }
           } else {
             const rx = throwRecv ? throwRecv.x : op.fromX + 8;
             const ry = throwRecv ? throwRecv.y : op.fromY < 50 ? 22 : 78;
             const arrived = moveBallSmoothTo(sim.ball, rx, ry, dtSec, 15);
-            if ((arrived && (!throwRecv || Math.hypot(throwRecv.x - sim.ball.x, throwRecv.y - sim.ball.y) < 2.8)) || op.timerMs >= op.durationMs) {
+            if (arrived && throwRecv && Math.hypot(throwRecv.x - sim.ball.x, throwRecv.y - sim.ball.y) < 2.8) {
               if (throwRecv && throwRecv.slotId !== 'gk' && !throwRecv.isSentOff) {
                 sim.carrierKey = throwRecv.key;
                 sim.possSide = throwRecv.side;
@@ -1981,8 +1882,7 @@ export default function MatchPitch2D({
         })),
         ballX: sim.ball.x,
         ballY: sim.ball.y,
-        carrierKey: sim.carrierKey,
-        fadeOpacity: sim.fadeOpacity,
+        carrierKey: sim.carrierKey && Math.hypot(players[sim.carrierKey].x - sim.ball.x, players[sim.carrierKey].y - sim.ball.y) < 2.6 ? sim.carrierKey : null,
         netRippleSide: sim.netRippleSide,
         goalSweepSide: sim.goalSweepSide,
         goalBanner: sim.goalBanner,
@@ -2050,13 +1950,6 @@ export default function MatchPitch2D({
       </div>
 
       <div className="relative w-full flex-1 min-h-[340px] sm:min-h-[400px] md:min-h-[460px] xl:min-h-[500px] soccer-pitch rounded-lg overflow-hidden select-none">
-        {renderFrame.fadeOpacity > 0.01 && (
-          <div
-            style={{ opacity: renderFrame.fadeOpacity }}
-            className="absolute inset-0 z-40 bg-slate-950 pointer-events-none transition-opacity duration-150"
-          />
-        )}
-
         {renderFrame.goalBanner && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-bounce">
             <div
@@ -2207,7 +2100,8 @@ export default function MatchPitch2D({
                   top: `${tok.y}%`,
                   transform: `translate(-50%, -50%) rotate(${tok.diveAngle || 0}deg)`
                 }}
-                className={`absolute flex flex-col items-center transition-transform duration-150 ease-out pointer-events-none ${
+                data-player-key={tok.key}
+                className={`absolute w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 flex flex-col items-center transition-transform duration-150 ease-out pointer-events-none ${
                   tok.isSentOff
                     ? 'opacity-45 scale-90 z-0'
                     : tok.isCelebrating
@@ -2220,17 +2114,17 @@ export default function MatchPitch2D({
                 }`}
               >
                 {tok.actionBadge && (
-                  <span className="mb-0.5 px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 font-display text-[8px] font-black uppercase tracking-wider shadow whitespace-nowrap">
+                  <span className="absolute bottom-full mb-1 px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 font-display text-[8px] font-black uppercase tracking-wider shadow whitespace-nowrap">
                     {tok.actionBadge}
                   </span>
                 )}
                 {tok.cardBadge && (
-                  <span className="mb-0.5 text-xs leading-none drop-shadow">
+                  <span className="absolute -right-2 -top-2 text-xs leading-none drop-shadow">
                     {tok.cardBadge === 'RED' ? '🟥' : '🟨'}
                   </span>
                 )}
                 <div
-                  className={`w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full overflow-hidden border-2 bg-slate-900 flex items-center justify-center ${borderClass}`}
+                  className={`shrink-0 w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full overflow-hidden border-2 bg-slate-900 flex items-center justify-center ${borderClass}`}
                 >
                   {tok.photo ? (
                     <img
@@ -2245,7 +2139,7 @@ export default function MatchPitch2D({
                   )}
                 </div>
                 <span
-                  className={`mt-0.5 px-1 rounded text-[8px] sm:text-[9px] font-bold leading-tight whitespace-nowrap ${
+                  className={`absolute top-full mt-0.5 px-1 rounded text-[8px] sm:text-[9px] font-bold leading-tight whitespace-nowrap ${
                     tok.isCelebrating || tok.isStar
                       ? 'bg-amber-400 text-slate-950 font-extrabold'
                       : isCarrier
@@ -2262,6 +2156,7 @@ export default function MatchPitch2D({
           })}
 
           <div
+            data-match-ball
             style={{ left: `${renderFrame.ballX}%`, top: `${renderFrame.ballY}%` }}
             className="absolute -translate-x-1/2 -translate-y-1/2 z-40 pointer-events-none"
           >
