@@ -132,7 +132,7 @@ export default function AuctionArena1v1({
                 <button
                   onClick={onToggleP2Bot}
                   disabled={isP2Disabled}
-                  className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-sm border uppercase tracking-wider cursor-pointer ${
+                  className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-sm border uppercase tracking-wider whitespace-nowrap shrink-0 cursor-pointer ${
                     isP2Bot
                       ? 'bg-rose-900/70 border-rose-400 text-rose-200'
                       : 'bg-slate-800 border-slate-600 text-slate-300 hover:border-slate-500'
@@ -593,7 +593,7 @@ export default function AuctionArena1v1({
               <button
                 onClick={onToggleP2Bot}
                 disabled={isP2Disabled}
-                className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-sm border uppercase tracking-wider transition-all cursor-pointer ${
+                className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-sm border uppercase tracking-wider whitespace-nowrap shrink-0 transition-all cursor-pointer ${
                   isP2Bot
                     ? 'bg-rose-900/70 border-rose-400 text-rose-200'
                     : 'bg-slate-800 border-slate-600 text-slate-300 hover:border-slate-500'
