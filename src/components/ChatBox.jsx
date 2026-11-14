@@ -38,7 +38,7 @@ export default function ChatBox({
   };
 
   return (
-    <div className="w-full max-w-[1700px] mx-auto px-3.5 pt-3 relative z-20">
+    <div className="chat-bar w-full max-w-[1700px] mx-auto px-3.5 pt-3 relative z-20">
       <div className="flex flex-wrap items-center justify-between gap-3 min-h-[46px]">
         {/* LEFT SIDE (SELF): Chat Button + Latest Self Message */}
         <div className="flex items-center gap-3 relative min-w-0 flex-1">
@@ -67,7 +67,7 @@ export default function ChatBox({
               <span className="truncate font-semibold">{latestSelfMsg.text}</span>
             </div>
           ) : (
-            <span className="text-xs text-slate-500 hidden sm:inline">
+            <span className="chat-hint text-xs text-slate-500 hidden sm:inline">
               Nhấn CHAT để nhắn tin (tối đa {MAX_CHAT_CHARS} ký tự)
             </span>
           )}

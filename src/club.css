@@ -171,20 +171,29 @@ button:disabled { cursor: not-allowed; }
   .tool-link, .tool-icon { min-height: 36px; }
   .club-online { padding: 7px 10px; font-size: 10px; min-height: 36px; }
   .club-context {
-    width: calc(100% - max(28px, env(safe-area-inset-left, 14px) + env(safe-area-inset-right, 14px)));
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    margin: 10px auto 8px;
-    gap: 12px;
+    display: none;
   }
-  .club-context h1 { font-size: clamp(20px, 3vw, 28px); margin-top: 2px; text-wrap: balance; }
-  .club-progress { gap: 14px; font-size: 10px; padding: 0; }
+  .chat-bar {
+    padding-top: 4px;
+    padding-inline: max(14px, env(safe-area-inset-left, 14px));
+  }
+  .chat-bar > div {
+    min-height: 36px;
+    gap: 6px;
+  }
+  .chat-bar button {
+    padding: 5px 10px;
+    font-size: 11px;
+    min-height: 34px;
+  }
+  .chat-hint {
+    display: none !important;
+  }
   .club-main, .club-footer {
     width: calc(100% - max(28px, env(safe-area-inset-left, 14px) + env(safe-area-inset-right, 14px)));
   }
-  .club-main { padding-bottom: 16px; }
-  .club-footer { padding: 10px 0 max(12px, env(safe-area-inset-bottom, 12px)); flex-direction: row; }
+  .club-main { padding-top: 6px; padding-bottom: 12px; }
+  .club-footer { padding: 8px 0 max(10px, env(safe-area-inset-bottom, 10px)); flex-direction: row; }
 
   /* Keep 3-column auction & squad pitch side-by-side in landscape */
   .auction-layout {
@@ -193,15 +202,30 @@ button:disabled { cursor: not-allowed; }
     align-items: start;
   }
   .auction-column { grid-column: auto; grid-row: auto; }
-  .squad-panel { padding: 10px 8px; }
-  .squad-panel > div:first-child { min-height: 44px; gap: 6px; }
-  .squad-panel .soccer-pitch { height: clamp(210px, 56dvh, 300px); }
-  .auction-welcome { min-height: 0; padding: 14px; }
-  .auction-welcome-body { padding: 10px 0; }
-  .auction-headline { font-size: clamp(24px, 3.4vw, 36px); margin-bottom: 8px; }
-  .auction-facts { margin: 10px 0; padding: 8px 0; }
-  .auction-facts strong { font-size: 20px; }
+  .squad-panel { padding: 8px; }
+  .squad-panel > div:first-child { min-height: 40px; gap: 6px; }
+  .squad-panel .soccer-pitch { height: clamp(205px, 56dvh, 285px); }
+  .auction-welcome { min-height: 0; padding: 12px; }
+  .auction-welcome-body { padding: 6px 0; }
+  .auction-welcome-body > p { display: none; }
+  .auction-headline { font-size: clamp(20px, 3vw, 28px); margin-bottom: 6px; }
+  .auction-facts { margin: 8px 0; padding: 6px 0; }
+  .auction-facts strong { font-size: 18px; margin-bottom: 2px; }
+  .auction-welcome > div:last-child { display: none; }
   .ready-managers { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ready-managers > div > button {
+    width: auto;
+    min-width: 112px;
+    padding: 8px 16px;
+    min-height: 38px;
+    font-size: 11px;
+  }
+  .tactic-team > button {
+    width: auto;
+    min-width: 132px;
+    padding: 8px 20px;
+    min-height: 38px;
+  }
 
   /* Compact Match View: pitch on left, commentary/journal on right */
   .match-scoreboard { padding: 8px 14px; margin-bottom: 8px; gap: 12px; }
