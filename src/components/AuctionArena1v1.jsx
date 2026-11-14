@@ -175,14 +175,14 @@ export default function AuctionArena1v1({
             CHUẨN BỊ ĐỘI HÌNH · 11/11
           </span>
           <div
-            className={`flex items-center gap-2 px-3 py-0.5 rounded-sm border transition-all ${
+            className={`flex items-center gap-2 px-3 py-0.5 rounded-sm border transition-all shrink-0 ${
               tacticsUrgent
                 ? 'bg-rose-950/90 border-rose-500 text-rose-400 timer-urgent shadow-[0_0_18px_rgba(244,63,94,0.45)]'
                 : 'bg-slate-950 border-slate-700 text-amber-400'
             }`}
           >
-            <span className={`w-2 h-2 rounded-full ${tacticsUrgent ? 'bg-rose-500 animate-ping' : 'bg-emerald-400'}`} />
-            <span className="font-mono-num text-xl font-extrabold tracking-tight w-9 text-center">
+            <span className={`w-2 h-2 rounded-full shrink-0 ${tacticsUrgent ? 'bg-rose-500 animate-ping' : 'bg-emerald-400'}`} />
+            <span className="font-mono-num text-xl font-extrabold tracking-tight min-w-[3.25rem] whitespace-nowrap text-center">
               {tacticsTimeLeft}s
             </span>
           </div>
@@ -275,18 +275,18 @@ export default function AuctionArena1v1({
 
         {/* Crisp Digital Broadcast Clock */}
         <div
-          className={`flex items-center gap-2 px-3 py-0.5 rounded-sm border transition-all ${
+          className={`flex items-center gap-2 px-3 py-0.5 rounded-sm border transition-all shrink-0 ${
             isUrgent
               ? 'bg-rose-950/90 border-rose-500 text-rose-400 timer-urgent shadow-[0_0_18px_rgba(244,63,94,0.45)]'
               : 'bg-slate-950 border-slate-700 text-amber-400'
           }`}
         >
           <span
-            className={`w-2 h-2 rounded-full ${
+            className={`w-2 h-2 rounded-full shrink-0 ${
               isUrgent ? 'bg-rose-500 animate-ping' : 'bg-emerald-400'
             }`}
           />
-          <span className="font-mono-num text-xl font-extrabold tracking-tight w-8 text-center">
+          <span className="font-mono-num text-xl font-extrabold tracking-tight min-w-[3.25rem] whitespace-nowrap text-center">
             {timeLeft}s
           </span>
         </div>
