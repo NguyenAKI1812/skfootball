@@ -361,15 +361,15 @@ export default function AuctionArena1v1({
           </div>
 
           {/* TOP BID Broadcast Plate */}
-          <div className="w-full bg-slate-950/95 border border-amber-500/60 rounded-lg p-2.5 text-center shadow-xl mt-2.5 relative overflow-hidden">
+          <div className="top-bid-plate w-full bg-slate-950/95 border border-amber-500/60 rounded-lg p-2.5 text-center shadow-xl mt-2.5 relative overflow-hidden">
             <div className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">
               TOP BID
             </div>
-            <div className="font-mono-num text-4xl font-extrabold text-amber-400 my-0.5 tracking-tight">
+            <div className="top-bid-amount font-mono-num text-4xl font-extrabold text-amber-400 my-0.5 tracking-tight">
               {currentBid} <span className="font-display text-xl font-bold text-amber-300/90">M €</span>
             </div>
 
-            <div className="flex items-center justify-center gap-2 text-xs mt-1 flex-wrap">
+            <div className="top-bid-meta flex items-center justify-center gap-2 text-xs mt-1 flex-wrap">
               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">LEADER:</span>
               <span
                 className={`font-display text-xs font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-sm ${

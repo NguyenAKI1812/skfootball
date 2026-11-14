@@ -165,6 +165,14 @@ button:disabled { cursor: not-allowed; }
 .mobile-landscape-pc .chat-bar { padding-top: 6px; }
 .mobile-landscape-pc .chat-hint { display: none; }
 .mobile-landscape-pc .club-main { padding-top: 8px; padding-bottom: 16px; }
+.mobile-landscape-pc .auction-layout { align-items: start; }
+.mobile-landscape-pc .squad-panel { height: auto; justify-content: flex-start; padding: 10px; }
+.mobile-landscape-pc .squad-panel > div:first-child { min-height: 0; margin-bottom: 6px; padding-bottom: 6px; }
+.mobile-landscape-pc .top-bid-plate { padding: 5px 8px; margin-top: 6px; }
+.mobile-landscape-pc .top-bid-amount { font-size: 24px; line-height: 1.05; margin: 1px 0; }
+.mobile-landscape-pc .top-bid-amount span { font-size: 14px; }
+.mobile-landscape-pc .top-bid-meta { gap: 4px; margin-top: 2px; flex-wrap: nowrap; font-size: 10px; }
+.mobile-landscape-pc .top-bid-meta > span { padding-inline: 6px; font-size: 10px; max-width: 44%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mobile-landscape-pc .fixed.inset-0.z-50 {
   overflow-y: auto;
   padding: max(12px, env(safe-area-inset-top, 12px)) max(16px, env(safe-area-inset-right, 16px)) max(12px, env(safe-area-inset-bottom, 12px)) max(16px, env(safe-area-inset-left, 16px));
